@@ -1,6 +1,16 @@
 function q = rotm2quat_my(R)
-%UNTITLED3 Summary of this function goes here
-%   Detailed explanation goes here
+% ROTM2QUAT_MY Convert rotation matrix/matrices to quaternion(s).
+%   q = rotm2quat_my(R)
+%
+%   Input:
+%     R: 3x3 or 3x3xN rotation matrix/matrices
+%
+%   Output:
+%     q: 1x4 (if single) or Nx4 quaternion(s) [w x y z]
+%
+%   Notes:
+%     - Matches MATLAB rotm2quat behavior.
+%     - Ensures unit quaternion and w >= 0 for consistency.
 
     % Input validation
     if ndims(R) == 2 %#ok<*ISMAT>

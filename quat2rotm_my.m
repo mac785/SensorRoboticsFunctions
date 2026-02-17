@@ -1,6 +1,16 @@
 function R = quat2rotm_my(q)
-%UNTITLED3 Summary of this function goes here
-%   Detailed explanation goes here
+% QUAT2ROTM_MY Convert quaternion(s) to rotation matrix/matrices.
+%   R = quat2rotm_my(q)
+%
+%   Input:
+%     q: 1x4 or Nx4 array of quaternions [w x y z] (scalar-first)
+%
+%   Output:
+%     R: 3x3 (if q is 1x4) or 3x3xN (if q is Nx4)
+%
+%   Notes:
+%     - MATLAB's quat2rotm uses scalar-first convention [w x y z].
+%     - For numerical robustness, this implementation normalizes each quaternion.
 
     % Input validation
     if ~(isnumeric(q) && isreal(q))

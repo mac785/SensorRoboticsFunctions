@@ -1,6 +1,8 @@
 function R = axang2rotm_my(axang)
-%UNTITLED2 Summary of this function goes here
-%   Detailed explanation goes here
+% AXANG2ROTM_MY Convert axis-angle to rotation matrix.
+%   R = axang2rotm(axang)
+%   axang: 1x4 or Nx4 array, each row [ax ay az angle] (radians)
+%   R: 3x3 (if 1x4) or 3x3xN (if Nx4)
 
     if size(axang, 2) ~= 4
         error('axang2rotm_my:InvalidInput', ...
