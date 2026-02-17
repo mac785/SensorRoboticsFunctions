@@ -1,0 +1,55 @@
+function R = axang2rotm_my(axang)
+%UNTITLED2 Summary of this function goes here
+%   Detailed explanation goes here
+
+    if size(axang, 2) ~= 4
+        error('axang2rotm_my:InvalidInput', ...
+              'axang must be Nx4 with rows [ax ay az angle].');
+    end
+
+    N = size(axang,1);
+    R = zeros(3,3,N);
+
+    for i = 1:N
+        axis = axang(i, 1:3).';
+        angle = axang(i,4);
+
+        if ~isscalar(angle) || ~isfinite(angle)
+            error('axang2rotm_my:InvalidAngle', ...
+                  'Angle must be a finite scalar.');
+        end
+
+        % normalize axis
+        na = norm(axis);
+        if na < eps
+            if abs(angle) < 1e-12
+                R = eye(3);
+                continue;
+            else
+                error('axang2rotm_my:ZeroAxis', ...
+                      'axis is zero-length but angle is nonzero (row %d).', i);
+            end
+        end
+        u = axis / na;
+
+        % Tiny angles check - helps with floating point error
+        if abs(angle) < 1e-12
+            R = eye(3);
+            return;
+        end
+
+        % building skew matrix from unit axis
+        axis_skew = [ 0 -u(3) u(2);
+                    u(3) 0 -u(1);
+                    -u(2) u(1) 0 ];
+    
+        % Rodrigues'  formula
+        R = eye(3) + sin(angle)*axis_skew + (1 - cos(angle))*(axis_skew*axis_skew);
+    end
+
+    % To match matlab behavior
+    if N == 1
+        R = R(:,:,1);
+    end
+
+end
