@@ -10,7 +10,7 @@ For example, "quat2rotm_my.m" converts from a quaternion to rotation matrix. The
 AI Disclosure:
 I used Chat GPT to assist me in responding to this assignment. on PA 1 and 2, I used the prompt:
 
-Attacahed are a collection of matlab functions to convert from one representation to another. Please help me do the following: 1. Change the function names to match the Matlab Robotics Toolbox function names with a "_my" appended to the end. 2. Verify that the behavior of the functions will mimic the behavior of the Robotics toolbox functions. 3. If any changes need to be made, please describe them to me as well as mark them in the body of the code with comments for me to review. 4. Help me write meaningful function descriptions for the comment field at the top of the functions. 5. Write copy-paste test scripts that I can paste into the matlab terminal to validate that the functions behavior matches that of the Robotics Toolbox built-in functions.
+Attacahed are a collection of matlab functions to convert from one representation to another. Please help me do the following: 1. Change the function names to match the Matlab Robotics Toolbox function names with a "_my" appended to the end. 2. Verify that the behavior of the functions will mimic the behavior of the Robotics toolbox functions. 3. If any changes need to be made, please describe them to me as well as mark them in the body of the code with comments for me to review. 4. Help me write meaningful function descriptions for the comment field at the top of the functions. 5. Write copy-paste test scripts that I can paste into the matlab terminal to validate that the functions' behavior matches that of the Robotics Toolbox built-in functions.
 
 For PA 3, I used the prompts:
 
