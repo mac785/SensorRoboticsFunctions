@@ -14,7 +14,7 @@ Attacahed are a collection of matlab functions to convert from one representatio
 
 For PA 3, I used the prompts:
 
-Attached is a matlab program which is designed to follow the prompt shown in the includeded screenshot. Please validate the behavior of the program, help me tidy it up so that legibility is improved and more parts of the program are atomized into funcitons. If there are any suggestions you have or changes that need to be made, please clearly describe them to me as well as mark them in the bod of the code with comments for me to review.
+Attached is a matlab program which is designed to follow the prompt shown in the includeded screenshot. Please validate the behavior of the program, help me tidy it up so that legibility is improved and more parts of the program are atomized into funcitons. If there are any suggestions you have or changes that need to be made, please clearly describe them to me as well as mark them in the body of the code with comments for me to review.
 
 The modified program you suggested is not accurately showing the screw axis in the correct location. Please help me understand why you suggested the change to this new approach, and where my understanding may be flawed. 
 
