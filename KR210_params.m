@@ -39,24 +39,29 @@ w2 = [0; 1; 0];
 q2 = [a1; 0; d1];
 
 % Joint 3: rotates about Y at elbow
+% At home (all theta=0), arm extends along +X, so elbow is at x = a1+a2, z = d1
 w3 = [0; 1; 0];
-q3 = [a1; 0; d1 + a2];
+q3 = [a1 + a2; 0; d1];
 
-% Joint 4: rotates about X along forearm axis
+% Joint 4: rotates about X (forearm roll) — axis passes through wrist center
+% Wrist center at home: x = a1+a2+a3+d4, z = d1
 w4 = [1; 0; 0];
-q4 = [a1 + a3 + d4; 0; d1 + a2];
+q4 = [a1 + a2 + a3 + d4; 0; d1];
 
-% Joint 5: rotates about Y at wrist
+% Joint 5: rotates about Y at wrist (wrist pitch) — same wrist center point
 w5 = [0; 1; 0];
-q5 = [a1 + a3 + d4; 0; d1 + a2];
+q5 = [a1 + a2 + a3 + d4; 0; d1];
 
-% Joint 6: rotates about X at end-effector
+% Joint 6: rotates about X at wrist (tool roll) — same wrist center point
 w6 = [1; 0; 0];
-q6 = [a1 + a3 + d4; 0; d1 + a2];
+q6 = [a1 + a2 + a3 + d4; 0; d1];
 
 % Build Slist: each column is one screw axis [omega; v]
 ws = {w1, w2, w3, w4, w5, w6};
 qs = {q1, q2, q3, q4, q5, q6};
+
+% Store physical joint positions for visualization
+robot.q_joints = [q1, q2, q3, q4, q5, q6];  % 3×6, columns are joint positions at home
 
 robot.Slist = zeros(6, 6);
 for i = 1:6
