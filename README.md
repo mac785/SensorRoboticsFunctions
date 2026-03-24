@@ -1,4 +1,17 @@
 # SensorRoboticsFunctions
+This repository was repurposed to be used for THA2 of Algorithms for Sensor-Based Robotics. Originally, it was only for THA1.
+
+Please see file THA2_test_report_signed.pdf for assignment report. Please see anim_circle.avi, anim_helix.avi, anim_snake.avi, and anim_square.avi for animation videos.
+
+
+
+
+
+
+
+
+For recordkeeping purposes, the original readme for THA1 is below:
+
 Group of functions and 1 program for THA1 of Algorithms for Sensor-Based Robotics
 
 Description:
