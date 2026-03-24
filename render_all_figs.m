@@ -118,7 +118,7 @@ function add_meshes(ax, meshes, mesh_T0, thetalist, Slist, sc, color, alpha)
             V = bsxfun(@plus, R * (meshes{mi}.Points * sc)', t)';
             patch(ax, 'Faces', meshes{mi}.ConnectivityList, 'Vertices', V, ...
                   'FaceColor', color, 'FaceAlpha', alpha, 'EdgeColor', 'none', ...
-                  'FaceLighting', 'gouraud');
+                  'FaceLighting', 'gouraud', 'HandleVisibility', 'off');
         end
     end
     camlight(ax, 'headlight');

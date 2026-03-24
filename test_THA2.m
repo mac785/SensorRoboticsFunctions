@@ -36,30 +36,30 @@ end
 fprintf('\n========== PART (a)/(b): FK_space ==========\n');
 robot = KR120_params();
 
-% --- Test a1: at home (theta=0), FK must return M exactly
+% --- Test b1: at home (theta=0), FK must return M exactly
 T0   = FK_space(robot.M, robot.Slist, zeros(6,1));
 err  = norm(T0 - robot.M, 'fro');
-results = record(results, 'a1: FK_space(0) == M', err < 1e-10, ...
+results = record(results, 'b1: FK_space(0) == M', err < 1e-10, ...
                  sprintf('||T-M||_F = %.2e', err));
 
-% --- Test a2: rotation matrix at home must equal M's rotation (Ry+90 for KR120)
+% --- Test b2: rotation matrix at home must equal M's rotation (Ry+90 for KR120)
 %   KR120 tool0 fixed joint has rpy="0 pi/2 0", so M carries a Ry(+90) rotation.
 %   FK_space(theta=0) = M, so R(0) = M(1:3,1:3), not I.
 R_err = norm(T0(1:3,1:3) - robot.M(1:3,1:3), 'fro');
-results = record(results, 'a2: R(0) == M_rot', R_err < 1e-10, ...
+results = record(results, 'b2: R(0) == M_rot', R_err < 1e-10, ...
                  sprintf('||R-M_rot||_F = %.2e', R_err));
 
-% --- Test a3: pure J1 rotation pi/2 (Z-axis) preserves xy-radius and z
+% --- Test b3: pure J1 rotation pi/2 (Z-axis) preserves xy-radius and z
 T1      = FK_space(robot.M, robot.Slist, [pi/2;0;0;0;0;0]);
 p1      = T1(1:3,4);
 r_delta = abs(norm(p1(1:2)) - norm(robot.M(1:2,4)));
 z_delta = abs(p1(3) - robot.M(3,4));
-results = record(results, 'a3: J1 rotate pi/2 — xy-radius preserved', ...
+results = record(results, 'b3: J1 rotate pi/2 — xy-radius preserved', ...
                  r_delta < 1e-6, sprintf('delta = %.2e m', r_delta));
-results = record(results, 'a4: J1 rotate pi/2 — Z height preserved', ...
+results = record(results, 'b4: J1 rotate pi/2 — Z height preserved', ...
                  z_delta < 1e-6, sprintf('delta = %.2e m', z_delta));
 
-% --- Test a5: pure J2 rotation pi/2 — arm sweeps downward
+% --- Test b5: pure J2 rotation pi/2 — arm sweeps downward
 %   KR120: J2 at [a1, 0, d1].  EE-to-J2 vector at home = [a2+a3+d6, 0, dz]
 %   (dz = -0.041 m is the z-drop from link_3 to the wrist centre, joint_a4).
 %   Rotating J2 by +pi/2 about +Y applies Ry(+pi/2) to that vector:
@@ -70,7 +70,7 @@ p2       = T2(1:3,4);
 arm_x    = robot.a(2) + robot.a(3) + robot.d(6);   % x-reach from J2 to EE at home
 p2_exp   = [robot.a(1) + robot.dz; 0; robot.d(1) - arm_x];
 pos_err2 = norm(p2 - p2_exp);
-results  = record(results, 'a5: J2 rotate pi/2 — EE pos correct', ...
+results  = record(results, 'b5: J2 rotate pi/2 — EE pos correct', ...
                   pos_err2 < 1e-6, ...
                   sprintf('[%.4f,%.4f,%.4f] expect [%.4f,%.4f,%.4f]  err=%.2e', ...
                           p2(1),p2(2),p2(3), p2_exp(1),p2_exp(2),p2_exp(3), pos_err2));
