@@ -1,5 +1,5 @@
 %% robot_simulation.m
-% Graphical simulation of the KUKA KR210 R2700 Extra executing a multi-waypoint
+% Graphical simulation of the KUKA KR120 R2500 Pro executing a multi-waypoint
 % trajectory, using the Product-of-Exponentials FK and DLS inverse kinematics.
 %
 % The simulation:
@@ -15,17 +15,18 @@
 
 clc;
 addpath('.');
-robot = KR210_params();
+robot = KR120_params();
 
 %% ---- 1. Define Cartesian waypoints ----
-% A tilted ellipse centred roughly in the robot's dexterous workspace.
-% Centre: [2.2, 0, 1.2] m   rx = 0.8 m (XY plane)   rz = 0.5 m
+% A tilted ellipse centred roughly in the KR120's dexterous workspace.
+% Centre: [1.7, 0, 1.0] m   rx/ry = 0.5 m (XY plane)   rz = 0.35 m
+% (KR120 max reach ~2.7 m; keep well inside to ensure IK convergence.)
 n_wp   = 12;                        % number of waypoints around the ellipse
 phi    = linspace(0, 2*pi, n_wp+1);
 phi    = phi(1:end-1);              % drop duplicate endpoint
 
-cx = 2.2;  cy = 0.0;  cz = 1.2;
-rx = 0.8;  ry = 0.8;  rz = 0.5;
+cx = 1.7;  cy = 0.0;  cz = 1.0;
+rx = 0.5;  ry = 0.5;  rz = 0.35;
 
 % Desired EE orientation: pointing along -X at all waypoints (tip toward base)
 R_des = [-1  0  0;
@@ -69,7 +70,7 @@ end
 n_frames = size(theta_traj, 2);
 
 %% ---- 4. Set up persistent animation figure ----
-hfig = figure('Name', '(m) KR210 Trajectory Simulation', ...
+hfig = figure('Name', '(m) KR120 Trajectory Simulation', ...
               'Color', [0.12 0.12 0.12], 'Position', [100 80 1000 700]);
 
 % Pre-compute EE path for background trace
@@ -108,7 +109,7 @@ for f = 1:n_frames
     T_ee = T_frames{robot.n_dof+1} * robot.M;
 
     % Recover current joint positions from stored physical home positions.
-    % (cross(w,v) only gives the correct position when q·omega=0; for KR210
+    % (cross(w,v) only gives the correct position when q·omega=0; for KR120
     %  joints 4 & 6 that is not true, so we use robot.q_joints instead.)
     q_pts = zeros(3, robot.n_dof);
     for i = 1:robot.n_dof
@@ -153,7 +154,7 @@ for f = 1:n_frames
     ci      = max(1, round(w_norm * 255) + 1);
     bar_col = cmap(ci,:);
 
-    title(ax, sprintf('(m) KR210 Simulation   frame %d/%d\n  w = %.4f', ...
+    title(ax, sprintf('(m) KR120 Simulation   frame %d/%d\n  w = %.4f', ...
                       f, n_frames, w_m), 'Color', 'w', 'FontSize', 11);
 
     % Small coloured dot in corner to indicate manipulability level

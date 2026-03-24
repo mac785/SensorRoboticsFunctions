@@ -1,5 +1,5 @@
 %% robot_animation.m
-% Animates the KUKA KR210 tracing four geometric shapes in 3-D space.
+% Animates the KUKA KR120 R2500 Pro tracing four geometric shapes in 3-D space.
 %
 %   1. Circle  — closed loop in the YZ plane
 %   2. Square  — closed loop with right-angle corners in the YZ plane
@@ -17,7 +17,45 @@
 
 clc; close all;
 addpath('.');
-robot = KR210_params();
+robot = KR120_params();
+
+%% ---- Mesh overlay (optional translucent STL bodies) ----
+% Meshes are from the kuka_experimental ROS package and are already in metres.
+% Toggle SHOW_MESH to enable/disable without removing any code.
+MESH_SCALE = 1.0;              % meshes already in metres
+MESH_ALPHA = 0.22;             % 0 = invisible, 1 = fully opaque
+MESH_COLOR = [0.55 0.72 0.90]; % steel-blue tint
+
+% KR120 R2500 Pro — URDF mesh origins are all rpy="0 0 0", so no rotation
+% corrections are needed. Positions are the world-frame link origins at home.
+md1=0.675; ma1=0.350; ma2=1.150; ma3=1.000; mdz=-0.041;
+mwc = [ma1+ma2+ma3; 0; md1+mdz];   % wrist centre = [2.500; 0; 0.634]
+mesh_T0 = {
+    eye(4);                                     % base_link: origin at world [0,0,0]
+    [eye(3), [0;0;md1];        0,0,0,1];        % link_1:   at joint_a1 = [0,0,d1]
+    [eye(3), [ma1;0;md1];      0,0,0,1];        % link_2:   at joint_a2 = [a1,0,d1]
+    [eye(3), [ma1+ma2;0;md1];  0,0,0,1];        % link_3:   at joint_a3 = [a1+a2,0,d1]
+    [eye(3), mwc;               0,0,0,1];        % link_4:   at wrist centre
+    [eye(3), mwc;               0,0,0,1];        % link_5:   at wrist centre
+    [eye(3), mwc;               0,0,0,1];        % link_6:   at wrist centre
+};
+clear md1 ma1 ma2 ma3 mdz mwc;
+
+mesh_names = {'base_link','link_1','link_2','link_3','link_4','link_5','link_6'};
+meshes    = cell(1,7);
+SHOW_MESH = false;
+for mi = 1:7
+    mfp = fullfile('meshes', [mesh_names{mi}, '.stl']);
+    if exist(mfp, 'file')
+        meshes{mi} = stlread(mfp);
+        SHOW_MESH  = true;
+    end
+end
+clear mi mfp;
+if SHOW_MESH
+    fprintf('Mesh overlay enabled (%d / 7 files loaded).\n', ...
+            sum(~cellfun(@isempty, meshes)));
+end
 
 %% ---- Common settings ----
 % EE orientation: pointing in -X (toward base) throughout
@@ -56,8 +94,8 @@ VID_FPS   = 30;     % playback frames per second
 
 %% ---- Shape definitions ----
 % All shapes live at x = 2.4 m (arm facing the YZ plane at that depth).
-% Adjust cx/r/h to stay well inside the KR210 workspace.
-cx = 2.4;
+% Adjust cx/r/h to stay well inside the KR120 workspace.
+cx = 1.9;
 
 % --- 1. Circle ---
 r_c = 0.45;  cy_c = 0;  cz_c = 1.2;
@@ -164,12 +202,12 @@ for s = 1:numel(shapes)
 
     %% -- Animation --
     scale = norm(robot.M(1:3,4)) * 0.08;
-    hfig  = figure('Name', sprintf('KR210 — %s', shape.name), ...
+    hfig  = figure('Name', sprintf('KR120 — %s', shape.name), ...
                    'Color', 'w', 'Position', [120 80 920 660]);
 
     if RECORD
-        vid_file = sprintf('anim_%s.mp4', lower(shape.name));
-        vid = VideoWriter(vid_file, 'MPEG-4');
+        vid_file = sprintf('anim_%s.avi', lower(shape.name));
+        vid = VideoWriter(vid_file, 'Motion JPEG AVI');
         vid.FrameRate = VID_FPS;
         open(vid);
         fprintf('   Recording to %s ...\n', vid_file);
@@ -199,6 +237,16 @@ for s = 1:numel(shapes)
             q_pts(:,i) = T_fr{i}(1:3,1:3)*robot.q_joints(:,i) + T_fr{i}(1:3,4);
         end
         p_ee = T_ee(1:3,4);
+
+        %% Translucent mesh overlay
+        if SHOW_MESH
+            for mi = 1:7
+                if ~isempty(meshes{mi})
+                    draw_mesh(ax, meshes{mi}, T_fr{mi} * mesh_T0{mi}, ...
+                              MESH_SCALE, MESH_COLOR, MESH_ALPHA);
+                end
+            end
+        end
 
         %% Full desired path — dotted blue
         if shape.closed
@@ -256,9 +304,19 @@ end
 
 fprintf('\nAll animations complete.\n');
 
+%% ---- Helper: render an STL mesh with a rigid-body transform ----
+function draw_mesh(ax, tr, T, sc, color, alpha)
+    R = T(1:3,1:3);  t = T(1:3,4);
+    V = bsxfun(@plus, R * (tr.Points * sc)', t)';
+    patch(ax, 'Faces', tr.ConnectivityList, 'Vertices', V, ...
+          'FaceColor', color, 'FaceAlpha', alpha, ...
+          'EdgeColor', 'none', 'FaceLighting', 'gouraud');
+end
+
 %% ---- Helper: densify a segment from p0 to p1 (exclusive of endpoint) ----
 function pts = seg(p0, p1, n)
     t = linspace(0, 1, n+1);
     t = t(1:end-1);     % exclude endpoint (next segment starts there)
     pts = p0 + t .* (p1 - p0);
 end
+

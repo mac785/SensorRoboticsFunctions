@@ -11,7 +11,7 @@ function [thetalist, success, iter] = J_transpose_kinematics(robot, T_desired, t
 % where V_b is the body twist error computed from MatrixLog6.
 %
 % Inputs:
-%   robot      - robot struct from KR210_params()
+%   robot      - robot struct from KR120_params()
 %   T_desired  - 4x4 desired end-effector transform
 %   thetalist0 - n x 1 initial joint angle guess (radians)
 %   alpha      - step size (default: 0.1)

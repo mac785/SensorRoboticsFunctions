@@ -13,7 +13,7 @@ function T = FK_space(M, Slist, thetalist, visualize, q_joints_home)
 %                    When omitted, falls back to cross(ω,v) which is only
 %                    correct when q·ω = 0 for every joint (not true for
 %                    joints whose axis has a large component along its own
-%                    rotation direction, e.g. KR210 joints 4 & 6).
+%                    rotation direction, e.g. KR120 joints 4 & 6).
 %
 % Output:
 %   T         - 4x4 end-effector transformation matrix
@@ -48,8 +48,8 @@ function T = FK_space(M, Slist, thetalist, visualize, q_joints_home)
     % Preferred: use the supplied physical joint positions (robot.q_joints).
     % Fallback: cross(ω,v) gives the point on the axis *closest to origin*,
     %   which equals the physical joint position only when q·ω = 0.
-    %   For KR210 joints 4 & 6 (ω=[1;0;0], q_x≈3.155) this fallback returns
-    %   [0;0;d1] instead of [3.155;0;d1], making the link chain fold backwards.
+    %   For KR120 joints 4 & 6 (ω=[-1;0;0], q_x≈2.5) this fallback returns
+    %   [0;0;d1] instead of [2.5;0;d1], making the link chain fold backwards.
     q_home = zeros(3, n);
     for i = 1:n
         if ~isempty(q_joints_home)

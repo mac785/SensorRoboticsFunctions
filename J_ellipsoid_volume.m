@@ -13,7 +13,7 @@ function [vol_lin, vol_ang] = J_ellipsoid_volume(robot, thetalist)
 %   Linear  part: rows 4-6 of Js  ->  Jv
 %
 % Inputs:
-%   robot     - robot struct from KR210_params()
+%   robot     - robot struct from KR120_params()
 %   thetalist - n x 1 joint angle vector (radians)
 %
 % Outputs:

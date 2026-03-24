@@ -12,7 +12,7 @@
 
 clc;
 addpath('.');
-robot = KR210_params();
+robot = KR120_params();
 
 % -----------------------------------------------------------------------
 % Configurations used for demonstration

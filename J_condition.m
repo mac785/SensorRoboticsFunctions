@@ -10,7 +10,7 @@ function kappa = J_condition(robot, thetalist)
 % where sigma_i are the singular values of the full 6xn space Jacobian.
 %
 % Inputs:
-%   robot     - robot struct from KR210_params()
+%   robot     - robot struct from KR120_params()
 %   thetalist - n x 1 joint angle vector (radians)
 %
 % Output:

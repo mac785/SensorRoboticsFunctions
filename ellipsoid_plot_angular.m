@@ -12,7 +12,7 @@ function ellipsoid_plot_angular(robot, thetalist)
 % are the left singular vectors (columns of U in Jw = U*S*V').
 %
 % Inputs:
-%   robot     - robot struct from KR210_params()
+%   robot     - robot struct from KR120_params()
 %   thetalist - n x 1 joint angle vector (radians)
 
     Js = J_space(robot.Slist, thetalist);

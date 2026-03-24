@@ -11,7 +11,7 @@ function [thetalist, success, iter] = J_inverse_kinematics(robot, T_desired, the
 % This is Algorithm 6.2 from Lynch & Park, "Modern Robotics".
 %
 % Inputs:
-%   robot      - robot struct from KR210_params()
+%   robot      - robot struct from KR120_params()
 %   T_desired  - 4x4 desired end-effector transform
 %   thetalist0 - n x 1 initial joint angle guess (radians)
 %   eomg       - angular error tolerance (rad)   (default: 1e-3)

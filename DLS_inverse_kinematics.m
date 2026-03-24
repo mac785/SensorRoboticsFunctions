@@ -22,7 +22,7 @@ function [thetalist, success, iter] = DLS_inverse_kinematics(robot, T_desired, t
 %   theta  += J_b^T (J_b J_b^T + lambda^2 I)^{-1} * V_b
 %
 % Inputs:
-%   robot        - robot struct from KR210_params()
+%   robot        - robot struct from KR120_params()
 %   T_desired    - 4x4 desired end-effector transform
 %   thetalist0   - n x 1 initial joint angle guess (radians)
 %   lambda_max   - maximum damping factor  (default: 0.1)

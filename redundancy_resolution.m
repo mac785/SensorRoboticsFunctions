@@ -18,7 +18,7 @@ function [thetalist, success, iter] = redundancy_resolution(robot, T_desired, th
 % It is fully effective for redundant robots (n > 6).
 %
 % Inputs:
-%   robot      - robot struct from KR210_params()
+%   robot      - robot struct from KR120_params()
 %   T_desired  - 4x4 desired end-effector transform
 %   thetalist0 - n x 1 initial joint angle guess (radians)
 %   k0         - secondary-task gain (default: 5)

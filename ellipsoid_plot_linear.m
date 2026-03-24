@@ -11,7 +11,7 @@ function ellipsoid_plot_linear(robot, thetalist)
 % Semi-axes = singular values of Jv; directions = left singular vectors.
 %
 % Inputs:
-%   robot     - robot struct from KR210_params()
+%   robot     - robot struct from KR120_params()
 %   thetalist - n x 1 joint angle vector (radians)
 
     Js = J_space(robot.Slist, thetalist);

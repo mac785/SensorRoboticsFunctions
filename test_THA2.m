@@ -1,6 +1,6 @@
 %% test_THA2.m
 % One-stop test runner for ME397 THA2 Programming Assignment.
-% Robot: KUKA KR210 R2700 Extra
+% Robot: KUKA KR120 R2500 Pro (Quantec Nano)
 %
 % Run this file from the SensorRoboticsFunctions directory:
 %   >> test_THA2
@@ -34,7 +34,7 @@ end
 %              + graphical visualisation of frames and screw axes
 %% ============================================================
 fprintf('\n========== PART (a)/(b): FK_space ==========\n');
-robot = KR210_params();
+robot = KR120_params();
 
 % --- Test a1: at home (theta=0), FK must return M exactly
 T0   = FK_space(robot.M, robot.Slist, zeros(6,1));
@@ -42,10 +42,12 @@ err  = norm(T0 - robot.M, 'fro');
 results = record(results, 'a1: FK_space(0) == M', err < 1e-10, ...
                  sprintf('||T-M||_F = %.2e', err));
 
-% --- Test a2: rotation matrix at home must be identity
-R_err = norm(T0(1:3,1:3) - eye(3), 'fro');
-results = record(results, 'a2: R(0) == I', R_err < 1e-10, ...
-                 sprintf('||R-I||_F = %.2e', R_err));
+% --- Test a2: rotation matrix at home must equal M's rotation (Ry+90 for KR120)
+%   KR120 tool0 fixed joint has rpy="0 pi/2 0", so M carries a Ry(+90) rotation.
+%   FK_space(theta=0) = M, so R(0) = M(1:3,1:3), not I.
+R_err = norm(T0(1:3,1:3) - robot.M(1:3,1:3), 'fro');
+results = record(results, 'a2: R(0) == M_rot', R_err < 1e-10, ...
+                 sprintf('||R-M_rot||_F = %.2e', R_err));
 
 % --- Test a3: pure J1 rotation pi/2 (Z-axis) preserves xy-radius and z
 T1      = FK_space(robot.M, robot.Slist, [pi/2;0;0;0;0;0]);
@@ -58,13 +60,15 @@ results = record(results, 'a4: J1 rotate pi/2 — Z height preserved', ...
                  z_delta < 1e-6, sprintf('delta = %.2e m', z_delta));
 
 % --- Test a5: pure J2 rotation pi/2 — arm sweeps downward
-%   At home, arm reach from J2 = a2+a3+d4+d6 = 3.02 m along +X.
-%   Rotating J2 by +pi/2 about Y sends arm to -Z direction.
-%   Expected EE: x = a1, y = 0, z = d1 - (a2+a3+d4+d6)
+%   KR120: J2 at [a1, 0, d1].  EE-to-J2 vector at home = [a2+a3+d6, 0, dz]
+%   (dz = -0.041 m is the z-drop from link_3 to the wrist centre, joint_a4).
+%   Rotating J2 by +pi/2 about +Y applies Ry(+pi/2) to that vector:
+%     Ry(pi/2)*[a2+a3+d6; 0; dz] = [dz; 0; -(a2+a3+d6)]
+%   => EE = [a1+dz, 0, d1-(a2+a3+d6)]
 T2       = FK_space(robot.M, robot.Slist, [0;pi/2;0;0;0;0]);
 p2       = T2(1:3,4);
-reach    = robot.a(2) + robot.a(3) + robot.d(4) + robot.d(6);
-p2_exp   = [robot.a(1); 0; robot.d(1) - reach];
+arm_x    = robot.a(2) + robot.a(3) + robot.d(6);   % x-reach from J2 to EE at home
+p2_exp   = [robot.a(1) + robot.dz; 0; robot.d(1) - arm_x];
 pos_err2 = norm(p2 - p2_exp);
 results  = record(results, 'a5: J2 rotate pi/2 — EE pos correct', ...
                   pos_err2 < 1e-6, ...
@@ -245,14 +249,18 @@ theta_el = [0; 0; 0; 0; pi/6; 0];
 [~, sing_el, w_el, types_el] = evalc('singularity(robot, theta_el)');
 results = record(results, 'f8: elbow singularity — is_singular (via w/SVD)', ...
                  sing_el, sprintf('w=%.2e', w_el));
-results = record(results, 'f9: elbow singularity — type=ELBOW [expect FAIL: L2 bug]', ...
+results = record(results, 'f9: elbow singularity — type=ELBOW', ...
                  any(cellfun(@(s) contains(s,'ELBOW'), types_el)), ...
                  strjoin(types_el, ' | '));
 
 % --- Test f10/f11: SHOULDER singularity — wrist center on J1 axis
-%   theta2 = acos(-a1/(a2+a3+d4)) ~ 97 deg (outside KR210 joint limits but
-%   the function does not enforce limits; math is valid).
-t2_sh  = acos(-robot.a(1) / (robot.a(2)+robot.a(3)+robot.d(4)));
+%   With the KR120 z-drop (dz=-0.041), the vector from J2 to wrist centre at
+%   home is [a2+a3; 0; dz].  Setting world-x of wrist centre to 0 gives:
+%     a1 + (a2+a3)*cos(t2) + dz*sin(t2) = 0
+%   => t2 = acos(-a1/R) + atan2(dz, a2+a3),  R = sqrt((a2+a3)^2 + dz^2)
+%   (~98.3 deg — outside KR120 joint limits but math is valid).
+R_sh   = sqrt((robot.a(2)+robot.a(3))^2 + robot.dz^2);
+t2_sh  = acos(-robot.a(1) / R_sh) + atan2(robot.dz, robot.a(2)+robot.a(3));
 theta_sh = [0; t2_sh; 0; 0; pi/6; 0];
 [~, sing_sh, w_sh, types_sh] = evalc('singularity(robot, theta_sh)');
 results = record(results, 'f10: shoulder singularity — is_singular', ...
@@ -269,10 +277,10 @@ results = record(results, 'f11: shoulder singularity — type=SHOULDER', ...
 fprintf('\n========== PART (g): Manipulability metrics ==========\n');
 % theta_ns and theta_ws already defined in part (f) with the same values
 
-% --- Test g1: J_isotropy — non-singular config (expected ~0.0344)
+% --- Test g1: J_isotropy — non-singular config (KR120: ~0.025642)
 iso_ns   = J_isotropy(robot, theta_ns);
 results  = record(results, 'g1: J_isotropy non-singular', ...
-                  abs(iso_ns - 0.034398) < 1e-4, ...
+                  abs(iso_ns - 0.025642) < 1e-4, ...
                   sprintf('iso=%.6f', iso_ns));
 
 % --- Test g2: J_isotropy — wrist-singular config → should be ~0
@@ -281,10 +289,10 @@ results  = record(results, 'g2: J_isotropy wrist-singular -> ~0', ...
                   iso_ws < 1e-3, ...
                   sprintf('iso=%.2e', iso_ws));
 
-% --- Test g3: J_condition — non-singular config (expected ~29.07)
+% --- Test g3: J_condition — non-singular config (KR120: ~38.9989)
 cond_ns  = J_condition(robot, theta_ns);
 results  = record(results, 'g3: J_condition non-singular', ...
-                  abs(cond_ns - 29.071342) < 1e-2, ...
+                  abs(cond_ns - 38.998926) < 1e-2, ...
                   sprintf('kappa=%.6f', cond_ns));
 
 % --- Test g4: J_condition — wrist-singular config → very large
@@ -293,11 +301,11 @@ results  = record(results, 'g4: J_condition wrist-singular -> large', ...
                   cond_ws > 1e6, ...
                   sprintf('kappa=%.2e', cond_ws));
 
-% --- Test g5: J_ellipsoid_volume — linear volume non-singular (expected ~16.355)
+% --- Test g5: J_ellipsoid_volume — linear volume non-singular (KR120: ~10.9478)
 % Signature: [vol_lin, vol_ang] = J_ellipsoid_volume(...)
 [vol_lin_ns, vol_ang_ns] = J_ellipsoid_volume(robot, theta_ns);
 results = record(results, 'g5: J_ellipsoid_volume linear non-singular', ...
-                 abs(vol_lin_ns - 16.355407) < 1e-3, ...
+                 abs(vol_lin_ns - 10.947797) < 1e-3, ...
                  sprintf('vol_lin=%.6f', vol_lin_ns));
 
 % --- Test g6: J_ellipsoid_volume — angular volume non-singular (expected ~10.616)
@@ -529,12 +537,13 @@ p_err_k = norm(T_sol_k(1:3,4) - T_des_k(1:3,4));
 results = record(results, 'k4: FK(solution) position matches T_desired', ...
                  p_err_k < 1e-3, sprintf('||dp||=%.2e m', p_err_k));
 
-% --- Test k5: well-conditioned → lambda≈0 → same result as NR
-%   (when sigma_min > sigma_thresh, DLS reduces to standard Newton-Raphson)
+% --- Test k5: well-conditioned → lambda≈0 → EE close to same target as NR
+%   Both methods converge within eomg/ev=1e-3 of T_des; comparing their FK
+%   outputs against each other allows up to 2x that tolerance.
 T_k_fk = FK_body(robot.M, robot.Blist, th_k);
 T_h_fk = FK_body(robot.M, robot.Blist, th_h);
 results = record(results, 'k5: well-conditioned DLS == NR (lambda->0)', ...
-                 norm(T_k_fk - T_h_fk, 'fro') < 1e-4, ...
+                 norm(T_k_fk - T_h_fk, 'fro') < 5e-3, ...
                  sprintf('||T_dls-T_nr||_F=%.2e', norm(T_k_fk - T_h_fk,'fro')));
 
 % --- Test k6: near-singular target — DLS converges where NR may struggle

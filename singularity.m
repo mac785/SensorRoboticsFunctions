@@ -1,6 +1,6 @@
 function [is_singular, w, types] = singularity(robot, thetalist, tol)
 % singularity: Analytically identifies singularity configurations of a
-%              6-DOF serial robot with spherical wrist (e.g., KUKA KR210).
+%              6-DOF serial robot with spherical wrist (e.g., KUKA KR120).
 %
 % A configuration is singular when det(Js) = 0, i.e., the Jacobian loses
 % full rank and certain end-effector velocities become unachievable.
@@ -23,7 +23,7 @@ function [is_singular, w, types] = singularity(robot, thetalist, tol)
 %      Cause:     Joints 2 and 3 become coplanar — arm Jacobian loses rank.
 %
 % Inputs:
-%   robot     - robot struct from KR210_params()
+%   robot     - robot struct from KR120_params()
 %   thetalist - n x 1 joint angle vector (radians)
 %   tol       - singularity proximity tolerance (default: 1e-3)
 %
@@ -55,8 +55,8 @@ function [is_singular, w, types] = singularity(robot, thetalist, tol)
     % do not move it.  Compute wrist center by applying only joints 1-3
     % to its home position.
     %
-    % Home wrist-center (arm extended along +X): p_wc0 = [a1+a2+a3+d4; 0; d1]
-    p_wc_home = [robot.a(1)+robot.a(2)+robot.a(3)+robot.d(4); 0; robot.d(1)];
+    % Home wrist-center (arm extended along +X): p_wc0 = [a1+a2+a3; 0; d1+dz]
+    p_wc_home = [robot.a(1)+robot.a(2)+robot.a(3); 0; robot.d(1)+robot.dz];
     T_arm = eye(4);
     for i = 1:min(3, robot.n_dof)
         T_arm = T_arm * MatrixExp6(vecToSE3(robot.Slist(:,i) * thetalist(i)));
@@ -69,14 +69,14 @@ function [is_singular, w, types] = singularity(robot, thetalist, tol)
     end
 
     %% ---- 3. Elbow singularity: arm at its reach limit ----
-    % 2-link arm: L1 = a2 (upper arm), L2 = sqrt(a3^2+d4^2) (forearm).
+    % 2-link arm: L1 = a2 (upper arm), L2 = sqrt(a3^2+dz^2) (forearm — includes z-drop).
     % Singularity when dist(shoulder, wrist) = L1+L2 (extended)
     %                                        or |L1-L2| (folded).
     T1         = MatrixExp6(vecToSE3(robot.Slist(:,1) * thetalist(1)));
     p_shoulder = T1(1:3,1:3) * [robot.a(1); 0; robot.d(1)] + T1(1:3,4);
 
     L1  = robot.a(2);
-    L2  = robot.a(3) + robot.d(4);
+    L2  = sqrt(robot.a(3)^2 + robot.dz^2);
     d_sw = norm(p_wc - p_shoulder);
 
     if abs(d_sw - (L1 + L2)) < tol
