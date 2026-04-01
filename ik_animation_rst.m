@@ -1,19 +1,20 @@
-%% ik_animation.m
+%% ik_animation_rst.m
 % Presentation animation: IK convergence with live manipulability metrics.
+% RST variant — uses importrobot() + show() for 3D rendering with DAE visual meshes
+% instead of the manual STL patch overlay used in ik_animation.m.
 %
-% Produces a 4-panel figure animated over IK iterations and saves it as an
-% AVI video. Panels:
-%   Left            3D robot arm + linear (solid) and angular (wireframe) ellipsoids
-%   Top-right       Condition number κ = σ_max/σ_min  (log scale)
-%   Mid-upper-right Isotropy index   ι = σ_min/σ_max  (linear)
-%   Mid-lower-right Ellipsoid volumes: linear (—) and angular (- -)
-%   Bot-right       Convergence: v_err (—) and ω_err (- -)
+% Requires: Robotics System Toolbox, load_kr120_rst.m, meshes/*.dae
+%
+% Panels:
+%   Left        3D robot (RST show()) + linear velocity manipulability ellipsoid
+%   Top-right   Condition number κ = σ_max/σ_min  (log scale)
+%   Mid-right   Isotropy index   ι = σ_min/σ_max  (linear)
+%   Bot-right   Angular and linear error convergence (log scale)
 %
 % USAGE:
-%   Edit the CONFIGURATION section below, then run:
-%     >> ik_animation
-%
-% To produce videos for all four methods, change METHOD each time and re-run.
+%   >> ik_animation_rst
+% Or set METHOD before running (e.g. from run_all_ik_rst.m):
+%   METHOD = 'DLS'; ik_animation_rst;
 
 close all;
 addpath('.');
@@ -22,51 +23,22 @@ addpath('.');
 %%  CONFIGURATION — edit here to switch method / scenario
 %% ========================================================================
 
-if ~exist('METHOD','var'), METHOD = 'NR'; end  % override from run_all_ik if pre-set
-RECORD      = true;      % true = save .avi video
-VIDEO_FILE  = ['ik_anim_' lower(METHOD) '.avi'];
-FPS         = 8;         % output video frame rate
-STRIDE      = 1;         % show every Nth iteration  (set >1 to thin JT frames)
-HOLD_FRAMES = 14;        % extra frames held on final converged pose
+if ~exist('METHOD','var'), METHOD = 'NR'; end  % override from run_all_ik_rst if pre-set
+RECORD      = true;
+VIDEO_FILE  = ['ik_anim_rst_' lower(METHOD) '.avi'];
+FPS         = 8;
+STRIDE      = 1;
+HOLD_FRAMES = 14;
 
 robot      = KR120_params();
-THETA_0    = zeros(6,1);                              % home configuration (all joints zero)
-THETA_GOAL = [pi/2; -pi/4; pi/3; pi/4; pi/4; pi/6]; % goal: 90 deg J1 sweep + arm bend
+THETA_0    = zeros(6,1);
+THETA_GOAL = [pi/2; -pi/4; pi/3; pi/4; pi/4; pi/6];
 
-%% ---- Mesh overlay (matches robot_animation.m) ----
-MESH_SCALE = 1.0;
-MESH_ALPHA = 0.22;
-MESH_COLOR = [0.55 0.72 0.90];   % steel-blue tint
+%% ---- Load RST robot (DAE visual meshes via importrobot) ----
+fprintf('Loading RST robot model...\n');
+rbt = load_kr120_rst();
 
-md1=0.675; ma1=0.350; ma2=1.150; ma3=1.000; mdz=-0.041;
-mwc = [ma1+ma2+ma3; 0; md1+mdz];
-mesh_T0 = {
-    eye(4);
-    [eye(3), [0;0;md1];        0,0,0,1];
-    [eye(3), [ma1;0;md1];      0,0,0,1];
-    [eye(3), [ma1+ma2;0;md1];  0,0,0,1];
-    [eye(3), mwc;               0,0,0,1];
-    [eye(3), mwc;               0,0,0,1];
-    [eye(3), mwc;               0,0,0,1];
-};
-clear md1 ma1 ma2 ma3 mdz mwc;
-
-mesh_names = {'base_link','link_1','link_2','link_3','link_4','link_5','link_6'};
-meshes = cell(1,7);
-SHOW_MESH = false;
-for mi = 1:7
-    mfp = fullfile('meshes', [mesh_names{mi}, '.stl']);
-    if exist(mfp, 'file')
-        meshes{mi} = stlread(mfp);
-        SHOW_MESH  = true;
-    end
-end
-clear mi mfp;
-if SHOW_MESH
-    fprintf('Mesh overlay enabled (%d / 7 files loaded).\n', sum(~cellfun(@isempty,meshes)));
-end
-
-% Method-specific IK solver options (passed directly to collect_ik_history)
+% Method-specific IK solver options
 switch METHOD
     case 'NR',  IK_OPTS = {};
     case 'JT',  IK_OPTS = {'alpha',0.1,'max_iter',500}; STRIDE = 8;
@@ -92,9 +64,8 @@ fprintf('Running %s ...\n', LABEL);
 history = collect_ik_history(robot, T_desired, THETA_0, METHOD, IK_OPTS{:});
 N_iter  = numel(history);
 
-% Frame index sequence: one frame per stride, then hold on final frame
-anim_idx   = unique([1 : STRIDE : N_iter, N_iter]);
-frame_seq  = [anim_idx, repmat(N_iter, 1, HOLD_FRAMES)];
+anim_idx  = unique([1 : STRIDE : N_iter, N_iter]);
+frame_seq = [anim_idx, repmat(N_iter, 1, HOLD_FRAMES)];
 fprintf('Animation: %d frames from %d iterations (stride=%d).\n', ...
         numel(frame_seq), N_iter, STRIDE);
 
@@ -172,10 +143,9 @@ yline(ax_err, 1e-3, '--', 'Color',[0.7 0.7 0.7], 'LineWidth',0.8, ...
       'Label','tol','LabelHorizontalAlignment','left','FontSize',8);
 
 %% ========================================================================
-%%  STEP 4: Static 3D elements (goal marker, arm legend proxy) + timing label
+%%  STEP 4: Static 3D elements + timing annotation
 %% ========================================================================
 
-% Timing annotation — fixed text below the 3D axes for the full video
 total_s     = history(end).elapsed_s;
 ms_per_iter = total_s / N_iter * 1000;
 annotation(fig, 'textbox', [0.06 0.02 0.44 0.08], ...
@@ -184,20 +154,12 @@ annotation(fig, 'textbox', [0.06 0.02 0.44 0.08], ...
     'EdgeColor','none','BackgroundColor','none','Color','k', ...
     'FontSize',9,'HorizontalAlignment','center','VerticalAlignment','middle');
 
+% Goal marker and legend are drawn inside draw_rst_and_ellipsoid each frame
+% (required because PreservePlot=false clears axes children on every show() call)
 p_goal = T_desired(1:3,4);
-plot3(ax3d, p_goal(1),p_goal(2),p_goal(3), 'r*', ...
-     'MarkerSize',14,'LineWidth',2.5,'DisplayName','Target EE');
-plot3(ax3d, nan,nan,nan, '-', 'Color',CLR, 'LineWidth',3.5, 'DisplayName','Robot arm');
-plot3(ax3d, nan,nan,nan, 's', 'Color','k', 'MarkerFaceColor',[0.9 0.2 0.2], ...
-      'MarkerSize',9, 'DisplayName','Current EE');
-surf(ax3d, nan(2),nan(2),nan(2), 'FaceAlpha',0.35,'EdgeColor','none', ...
-      'FaceColor',CLR,'DisplayName','Lin. vel. ellipsoid');
-surf(ax3d, nan(2),nan(2),nan(2), 'FaceAlpha',0,'EdgeColor',CLR, ...
-      'FaceColor','none','DisplayName','Ang. vel. ellipsoid');
-legend(ax3d,'Location','northwest','FontSize',8);
 
 %% ========================================================================
-%%  STEP 5: Animated graphics handles (grow each frame)
+%%  STEP 5: Animated graphics handles
 %% ========================================================================
 
 h_kap_line = plot(ax_kap, nan,nan, '-', 'Color',CLR, 'LineWidth',1.8);
@@ -206,10 +168,10 @@ h_kap_dot  = plot(ax_kap, nan,nan, 'o', 'Color',CLR, 'MarkerFaceColor',CLR,'Mark
 h_iso_line = plot(ax_iso, nan,nan, '-', 'Color',CLR, 'LineWidth',1.8);
 h_iso_dot  = plot(ax_iso, nan,nan, 'o', 'Color',CLR, 'MarkerFaceColor',CLR,'MarkerSize',8);
 
-h_lin_line = plot(ax_err, nan,nan, '-',  'Color',CLR, 'LineWidth',1.8);
 h_omg_line = plot(ax_err, nan,nan, '--', 'Color',CLR, 'LineWidth',1.8);
-h_lin_dot  = plot(ax_err, nan,nan, 's',  'Color',CLR, 'MarkerFaceColor',CLR,'MarkerSize',7);
+h_lin_line = plot(ax_err, nan,nan, '-',  'Color',CLR, 'LineWidth',1.8);
 h_omg_dot  = plot(ax_err, nan,nan, 'o',  'Color',CLR, 'MarkerFaceColor',CLR,'MarkerSize',7);
+h_lin_dot  = plot(ax_err, nan,nan, 's',  'Color',CLR, 'MarkerFaceColor',CLR,'MarkerSize',7);
 legend(ax_err, 'off');
 
 h_vlin_line = plot(ax_vol, nan,nan, '-',  'Color',CLR, 'LineWidth',1.8);
@@ -217,10 +179,9 @@ h_vang_line = plot(ax_vol, nan,nan, '--', 'Color',CLR, 'LineWidth',1.8);
 h_vlin_dot  = plot(ax_vol, nan,nan, 'o',  'Color',CLR, 'MarkerFaceColor',CLR,'MarkerSize',7);
 h_vang_dot  = plot(ax_vol, nan,nan, 's',  'Color',CLR, 'MarkerFaceColor',CLR,'MarkerSize',7);
 
-% 3D elements re-drawn each frame
-h_robot   = gobjects(0);
-h_ell     = gobjects(0);
-h_ell_ang = gobjects(0);
+h_rst      = [];   % RST show() handle, replaced each frame
+h_ell      = [];   % linear ellipsoid surf handle, replaced each frame
+h_ell_ang  = [];   % angular ellipsoid surf handle, replaced each frame
 
 %% ========================================================================
 %%  STEP 6: Video writer
@@ -241,16 +202,15 @@ end
 %% ========================================================================
 
 M_an  = numel(anim_idx);
-iters    = nan(1, M_an); kapps    = nan(1, M_an);
-isos     = nan(1, M_an); omgs     = nan(1, M_an); lins = nan(1, M_an);
+iters = nan(1, M_an); kapps = nan(1, M_an);
+isos  = nan(1, M_an); omgs  = nan(1, M_an); lins = nan(1, M_an);
 vols_lin = nan(1, M_an); vols_ang = nan(1, M_an);
-ai    = 0;   % index into the preallocated arrays
+ai    = 0;
 
 for fi = 1:numel(frame_seq)
     si = frame_seq(fi);
     s  = history(si);
 
-    % Accumulate metric history on advancing frames (not on hold frames)
     if fi <= M_an
         ai = ai + 1;
         iters(ai)    = si;
@@ -263,13 +223,12 @@ for fi = 1:numel(frame_seq)
     end
 
     % --- Refresh 3D view ---
-    delete(h_robot);
+    % h_ell/h_ell_ang deleted explicitly; h_rst managed via cla() inside draw function
     delete(h_ell);
     delete(h_ell_ang);
-    [h_robot, h_ell, h_ell_ang] = draw_robot_and_ellipsoid(ax3d, robot, s.theta, CLR, ...
-                           meshes, mesh_T0, SHOW_MESH, MESH_SCALE, MESH_COLOR, MESH_ALPHA);
+    [h_rst, h_ell, h_ell_ang] = draw_rst_and_ellipsoid(ax3d, robot, rbt, s.theta, CLR, p_goal);
 
-    % --- Status title on 3D axes ---
+    % --- Status title ---
     if s.converged
         status_str = sprintf('Converged at iter %d / %d', si, N_iter);
     else
@@ -281,26 +240,34 @@ for fi = 1:numel(frame_seq)
                    s.omg_err, s.lin_err)}, ...
           'FontSize',9,'Interpreter','tex','Color','k');
 
-    % --- Update growing metric lines (slice to filled portion only) ---
+    % --- Update metric lines ---
     set(h_kap_line,'XData',iters(1:ai),'YData',kapps(1:ai));
     set(h_kap_dot, 'XData',iters(ai), 'YData',kapps(ai));
     set(h_iso_line,'XData',iters(1:ai),'YData',isos(1:ai));
     set(h_iso_dot, 'XData',iters(ai), 'YData',isos(ai));
-    set(h_lin_line,'XData',iters(1:ai),'YData',lins(1:ai));
     set(h_omg_line,'XData',iters(1:ai),'YData',omgs(1:ai));
-    set(h_lin_dot, 'XData',iters(ai), 'YData',lins(ai));
+    set(h_lin_line,'XData',iters(1:ai),'YData',lins(1:ai));
     set(h_omg_dot, 'XData',iters(ai), 'YData',omgs(ai));
+    set(h_lin_dot, 'XData',iters(ai), 'YData',lins(ai));
     set(h_vlin_line,'XData',iters(1:ai),'YData',vols_lin(1:ai));
     set(h_vang_line,'XData',iters(1:ai),'YData',vols_ang(1:ai));
     set(h_vlin_dot, 'XData',iters(ai), 'YData',vols_lin(ai));
     set(h_vang_dot, 'XData',iters(ai), 'YData',vols_ang(ai));
 
+    % Close any stray figures created by show(), then restore current figure
+    % without raising the window (figure() causes WM resize events)
+    all_figs = findall(0, 'Type', 'figure');
+    for fj = 1:numel(all_figs)
+        if all_figs(fj) ~= fig
+            close(all_figs(fj));
+        end
+    end
     set(0, 'CurrentFigure', fig);
     drawnow;
 
     if RECORD
         f = getframe(fig);
-        if size(f.cdata,2) ~= 1920 || size(f.cdata,1) ~= 1080
+        if size(f.cdata,2) ~= 1400 || size(f.cdata,1) ~= 750
             f.cdata = imresize(f.cdata, [1080 1920]);
         end
         writeVideo(vw, f);
@@ -316,55 +283,58 @@ end
 %%  LOCAL FUNCTIONS
 %% ========================================================================
 
-function [h_all, h_ell, h_ell_ang] = draw_robot_and_ellipsoid(ax, robot, theta, ell_color, ...
-                               meshes, mesh_T0, show_mesh, mesh_scale, mesh_color, mesh_alpha)
-% Draw robot skeleton, coordinate frames, STL meshes, and linear + angular
-% velocity manipulability ellipsoids. Matches the rendering style of robot_animation.m.
-% Returns handle arrays for deletion on the next frame.
+function [h_rst, h_ell, h_ell_ang] = draw_rst_and_ellipsoid(ax, robot, rbt, theta, ell_color, p_goal)
+% Render the robot via RST show() and overlay linear + angular velocity ellipsoids.
+% PreservePlot=false clears axes children each call, so the goal marker and
+% legend are re-added here every frame.
 
-    EDISP  = 0.75;   % display size of largest ellipsoid semi-axis (metres)
-    N_ell  = 24;     % sphere tessellation resolution
-    scale  = norm(robot.M(1:3,4)) * 0.08;   % frame arrow length (matches robot_animation)
-    n      = robot.n_dof;
+    EDISP = 0.75;
+    N_ell = 24;
 
-    %% Partial FK transforms
-    T_fr = cell(1, n+1);
-    T_fr{1} = eye(4);
-    for ii = 1:n
-        T_fr{ii+1} = T_fr{ii} * MatrixExp6(vecToSE3(robot.Slist(:,ii) * theta(ii)));
-    end
-    T_ee = T_fr{n+1} * robot.M;
+    %% Clear all descendants of the axes (including nested hgtransform groups from show())
+    %  Preserve axis label text objects so xlabel/ylabel/zlabel survive the wipe.
+    kids   = findall(ax);
+    keep   = [ax; ax.XLabel; ax.YLabel; ax.ZLabel];
+    delete(kids(~ismember(kids, keep)));
+    hold(ax, 'on');
+    camlight(ax, 'headlight');
+
+    %% RST robot render — PreservePlot=true keeps the axes alive
+    before = ax.Children;
+    show(rbt, theta(:)', 'Parent', ax, ...
+         'PreservePlot', true, 'Visuals','on', 'Frames','off');
+    after  = ax.Children;
+    % Hide all objects added by show() from the legend
+    new_objs = setdiff(after, before);
+    set(new_objs, 'HandleVisibility', 'off');
+    h_rst = gobjects(0);   % cleanup is handled by cla() above, not delete()
+
+    %% Re-add goal marker and legend (cleared by cla)
+    plot3(ax, p_goal(1),p_goal(2),p_goal(3), 'r*', ...
+          'MarkerSize',14,'LineWidth',2.5,'DisplayName','Target EE');
+    surf(ax, nan(2),nan(2),nan(2), 'FaceAlpha',0.35,'EdgeColor','none', ...
+         'FaceColor',ell_color,'DisplayName','Lin. vel. ellipsoid');
+    surf(ax, nan(2),nan(2),nan(2), 'FaceAlpha',0,'EdgeColor',ell_color, ...
+         'FaceColor','none','DisplayName','Ang. vel. ellipsoid');
+    legend(ax,'Location','northwest','FontSize',8,'Color','w','TextColor','k','EdgeColor','k');
+
+    %% End-effector position via our FK (consistent with IK math)
+    T_ee = FK_body(robot.M, robot.Blist, theta);
     p_ee = T_ee(1:3,4);
 
-    q_pts = zeros(3, n);
-    for ii = 1:n
-        q_pts(:,ii) = T_fr{ii}(1:3,1:3)*robot.q_joints(:,ii) + T_fr{ii}(1:3,4);
-    end
+    %% EE marker — red square on top of RST render
+    plot3(ax, p_ee(1),p_ee(2),p_ee(3), 's', ...
+          'MarkerSize',11,'Color',[0.85 0.10 0.10], ...
+          'MarkerFaceColor',[0.85 0.10 0.10],'HandleVisibility','off');
 
-    % Preallocate: 7 meshes + 3 skeleton objects + n*3 quivers = 28 max
-    h_all = gobjects(1, 7 + 3 + n*3);
-    hi    = 0;
+    Js = J_space(robot.Slist, theta);
 
-    %% Translucent STL mesh overlay (drawn first — underneath everything)
-    if show_mesh
-        for mi = 1:7
-            if ~isempty(meshes{mi})
-                hi = hi + 1;
-                h_all(hi) = draw_mesh(ax, meshes{mi}, T_fr{mi} * mesh_T0{mi}, ...
-                                      mesh_scale, mesh_color, mesh_alpha);
-            end
-        end
-    end
-
-    %% Unit sphere grid for both ellipsoids
     [az_s, el_s] = meshgrid(linspace(0,2*pi,N_ell), linspace(-pi/2,pi/2,N_ell));
     x_u = [cos(el_s(:)).*cos(az_s(:)), ...
            cos(el_s(:)).*sin(az_s(:)), ...
            sin(el_s(:))]';
 
-    Js = J_space(robot.Slist, theta);
-
-    %% Linear velocity manipulability ellipsoid (solid, drawn before skeleton)
+    %% Linear velocity manipulability ellipsoid
     Jv          = Js(4:6, :);
     [U_v,S_v,~] = svd(Jv, 'econ');
     sv          = diag(S_v);
@@ -376,7 +346,7 @@ function [h_all, h_ell, h_ell_ang] = draw_robot_and_ellipsoid(ax, robot, theta, 
     h_ell = surf(ax, Xe,Ye,Ze, 'FaceAlpha',0.35,'EdgeColor','none', ...
                  'FaceColor',ell_color,'HandleVisibility','off');
 
-    %% Angular velocity manipulability ellipsoid (wireframe, same colour)
+    %% Angular velocity manipulability ellipsoid
     Jw          = Js(1:3, :);
     [U_w,S_w,~] = svd(Jw, 'econ');
     sw          = diag(S_w);
@@ -387,49 +357,4 @@ function [h_all, h_ell, h_ell_ang] = draw_robot_and_ellipsoid(ax, robot, theta, 
     Za = reshape(pts_w(3,:), N_ell, N_ell);
     h_ell_ang = surf(ax, Xa,Ya,Za, 'FaceAlpha',0,'EdgeColor',ell_color, ...
                      'FaceColor','none','HandleVisibility','off');
-
-    %% Robot links — black, LineWidth 3 (matches robot_animation.m)
-    link_pts = [q_pts, p_ee];
-    hi = hi + 1;
-    h_all(hi) = plot3(ax, link_pts(1,:),link_pts(2,:),link_pts(3,:), ...
-                      'k-','LineWidth',3,'HandleVisibility','off');
-
-    %% Joint markers — dark grey filled circles
-    hi = hi + 1;
-    h_all(hi) = plot3(ax, q_pts(1,:),q_pts(2,:),q_pts(3,:), 'o', ...
-                      'MarkerSize',7,'Color',[0.25 0.25 0.25], ...
-                      'MarkerFaceColor',[0.45 0.45 0.45],'HandleVisibility','off');
-
-    %% End-effector marker — red square
-    hi = hi + 1;
-    h_all(hi) = plot3(ax, p_ee(1),p_ee(2),p_ee(3), 's', ...
-                      'MarkerSize',11,'Color',[0.85 0.10 0.10], ...
-                      'MarkerFaceColor',[0.85 0.10 0.10],'HandleVisibility','off');
-
-    %% Joint coordinate frames — RGB quivers (matches robot_animation.m)
-    fc = {[0.90 0.20 0.20], [0.15 0.70 0.20], [0.15 0.30 0.90]};
-    for ii = 1:n
-        Rf = T_fr{ii}(1:3,1:3);
-        p  = q_pts(:,ii);
-        for k = 1:3
-            hi = hi + 1;
-            h_all(hi) = quiver3(ax, p(1),p(2),p(3), ...
-                                Rf(1,k)*scale, Rf(2,k)*scale, Rf(3,k)*scale, ...
-                                'Color',fc{k},'LineWidth',1.0, ...
-                                'MaxHeadSize',0.7,'AutoScale','off', ...
-                                'HandleVisibility','off');
-        end
-    end
-
-    h_all = h_all(1:hi);   % trim unused slots
-end
-
-function h = draw_mesh(ax, tr, T, sc, color, alpha)
-% Render an STL mesh with rigid-body transform T (matches robot_animation.m).
-    R = T(1:3,1:3);  t = T(1:3,4);
-    V = bsxfun(@plus, R * (tr.Points * sc)', t)';
-    h = patch(ax, 'Faces',tr.ConnectivityList,'Vertices',V, ...
-              'FaceColor',color,'FaceAlpha',alpha, ...
-              'EdgeColor','none','FaceLighting','gouraud', ...
-              'HandleVisibility','off');
 end

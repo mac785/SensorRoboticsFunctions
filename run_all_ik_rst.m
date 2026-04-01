@@ -1,7 +1,8 @@
-%% run_all_ik.m
-% Runs all four IK methods, prints convergence statistics, and saves videos.
+%% run_all_ik_rst.m
+% Runs all four IK methods, prints convergence statistics, and saves videos
+% using the RST (Robotics System Toolbox) renderer with DAE visual meshes.
 %
-%   >> run_all_ik
+%   >> run_all_ik_rst
 
 clc; close all;
 addpath('.');
@@ -25,7 +26,7 @@ IK_OPTS = {
 histories = cell(1,4);
 
 fprintf('\n%s\n', repmat('=',1,70));
-fprintf('  IK Method Comparison  —  KUKA KR120 R2500 Pro\n');
+fprintf('  IK Method Comparison  —  KUKA KR120 R2500 Pro  (RST renderer)\n');
 fprintf('  Start: home (all zeros)     Goal: [pi/2, -pi/4, pi/3, pi/4, pi/4, pi/6]\n');
 fprintf('%s\n\n', repmat('=',1,70));
 
@@ -91,7 +92,7 @@ fprintf('Producing videos...\n\n');
 for mi = 1:4
     METHOD = METHODS{mi};
     fprintf('--- Rendering %s ---\n', LABELS{mi});
-    ik_animation;
+    ik_animation_rst;
     close all;
     fprintf('\n');
 end
@@ -99,6 +100,6 @@ end
 fprintf('%s\n', repmat('=',1,70));
 fprintf('  All done. Videos saved:\n');
 for mi = 1:4
-    fprintf('    ik_anim_%s.avi\n', lower(METHODS{mi}));
+    fprintf('    ik_anim_rst_%s.avi\n', lower(METHODS{mi}));
 end
 fprintf('%s\n', repmat('=',1,70));
