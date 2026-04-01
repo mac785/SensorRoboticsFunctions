@@ -24,7 +24,7 @@ RANK   = 1;     % which interesting run to animate:
                 %   2 = second most interesting, etc.
                 %   Use the printed report to decide which rank to inspect.
 
-METHOD = 'NR';  % which IK method to animate:
+METHOD = 'RR';  % which IK method to animate:
                 %   'NR'  — Newton-Raphson
                 %   'JT'  — Jacobian Transpose
                 %   'RR'  — Redundancy Resolution
@@ -37,7 +37,7 @@ METHOD = 'NR';  % which IK method to animate:
 USE_RST = true;   % true  = RST renderer (DAE meshes, requires load_kr120_rst)
                   % false = skeleton + STL renderer
 
-RECORD     = false;                % true = save an .avi file
+RECORD     = true;                % true = save an .avi file
 VIDEO_FILE = sprintf('bench_anim_rank%d_%s.avi', RANK, lower(METHOD));
                                    % filename used when RECORD = true
 

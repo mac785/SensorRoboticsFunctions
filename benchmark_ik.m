@@ -33,13 +33,14 @@ addpath('.');
 %%  SECTION 1 — Configuration
 %% ========================================================================
 
-if ~exist('N_POINTS',           'var'), N_POINTS           = 5;     end
+if ~exist('N_POINTS',           'var'), N_POINTS           = 20;     end
 if ~exist('GOAL_THETAS',        'var'), GOAL_THETAS        = [];     end
 if ~exist('RANDOM_START',       'var'), RANDOM_START       = false;  end
 if ~exist('RANDOM_SEED',        'var'), RANDOM_SEED        = 42;     end
-if ~exist('THRESH_ITER_RATIO',  'var'), THRESH_ITER_RATIO  = 3.0;    end
+if ~exist('THRESH_ITER_RATIO',  'var'), THRESH_ITER_RATIO  = 50.0;   end  % JT is ~100x NR by design
 if ~exist('THRESH_KAPPA_RATIO', 'var'), THRESH_KAPPA_RATIO = 5.0;    end
-if ~exist('THRESH_TIME_RATIO',  'var'), THRESH_TIME_RATIO  = 5.0;    end
+if ~exist('THRESH_TIME_RATIO',  'var'), THRESH_TIME_RATIO  = 50.0;   end  % mirrors iter ratio
+if ~exist('MIN_INTERESTING_SCORE','var'), MIN_INTERESTING_SCORE = 2;  end  % require multiple flags
 if ~exist('ANIMATE_INTERESTING','var'), ANIMATE_INTERESTING = false;  end
 if ~exist('USE_RST',            'var'), USE_RST            = false;  end
 if ~exist('RECORD_ANIMATIONS',  'var'), RECORD_ANIMATIONS  = false;  end
@@ -190,11 +191,20 @@ fprintf('%s\n\n', repmat('=',1,92));
 %% ========================================================================
 %%  SECTION 6 — Interesting run detection
 %% ========================================================================
+% JT is excluded from convergence and ratio checks because it is a
+% fundamentally slower algorithm — it failing or taking more iterations
+% than NR/RR/DLS is expected behaviour, not a meaningful comparison point.
+%
 % Scoring per point (pi_):
-%   +2  convergence mismatch  (some converged, some did not)
-%   +1  any method used > THRESH_ITER_RATIO  × min iterations
-%   +1  any method has  > THRESH_KAPPA_RATIO × min condition number
-%   +1  any method took > THRESH_TIME_RATIO  × min wall-clock time
+%   +2  convergence mismatch among {NR, RR, DLS}
+%   +2  JT converges but one or more of {NR, RR, DLS} does not  (surprising)
+%   +1  any of {NR, RR, DLS} has > THRESH_KAPPA_RATIO × min kappa among that group
+%   +1  any of {NR, RR, DLS} used > THRESH_ITER_RATIO  × min iters among that group
+%   +1  any of {NR, RR, DLS} took > THRESH_TIME_RATIO  × min time among that group
+
+% Indices within METHODS for the three fast methods and JT
+FAST_IDX = [1, 3, 4];   % NR, RR, DLS
+JT_IDX   = 2;
 
 interest_score  = zeros(N_POINTS, 1);
 interest_detail = cell(N_POINTS, 1);
@@ -208,47 +218,64 @@ for pi_ = 1:N_POINTS
     time_vec   = [results(pi_,:).elapsed_s];
     kappa_vec  = [results(pi_,:).kappa_f];
 
-    % --- Convergence mismatch ---
-    n_conv = sum(conv_flags);
-    if n_conv > 0 && n_conv < N_METHODS
+    fast_conv  = conv_flags(FAST_IDX);
+    fast_iters = iters_vec(FAST_IDX);
+    fast_times = time_vec(FAST_IDX);
+    fast_kappa = kappa_vec(FAST_IDX);
+    jt_conv    = conv_flags(JT_IDX);
+
+    % --- Convergence mismatch among fast methods ---
+    n_fast_conv = sum(fast_conv);
+    if n_fast_conv > 0 && n_fast_conv < numel(FAST_IDX)
         score = score + 2;
-        failed_labels = LABELS(~conv_flags);
-        details{end+1} = sprintf('Convergence mismatch: %d/%d converged — failed: %s  (+2)', ...
-            n_conv, N_METHODS, strjoin(failed_labels, ', '));
+        failed = LABELS(FAST_IDX(~fast_conv));
+        details{end+1} = sprintf('Fast-method convergence mismatch: failed: %s  (+2)', ...
+            strjoin(failed, ', '));
     end
 
-    % --- Iteration ratio ---
-    min_iters = min(iters_vec);
-    for mi = 1:N_METHODS
-        if min_iters > 0 && (iters_vec(mi) / min_iters) > THRESH_ITER_RATIO
+    % --- Surprising: JT converges but a fast method does not ---
+    if jt_conv && ~all(fast_conv)
+        score = score + 2;
+        failed = LABELS(FAST_IDX(~fast_conv));
+        details{end+1} = sprintf('JT converged but fast method(s) failed: %s  (+2)', ...
+            strjoin(failed, ', '));
+    end
+
+    % --- Iteration ratio among fast methods only ---
+    min_fi = min(fast_iters);
+    for k = 1:numel(FAST_IDX)
+        mi = FAST_IDX(k);
+        if min_fi > 0 && (fast_iters(k) / min_fi) > THRESH_ITER_RATIO
             score = score + 1;
-            details{end+1} = sprintf('%s used %dx more iterations than fastest  (+1)', ...
-                METHODS{mi}, round(iters_vec(mi) / min_iters));
+            details{end+1} = sprintf('%s used %dx more iters than fastest fast-method  (+1)', ...
+                METHODS{mi}, round(fast_iters(k) / min_fi));
         end
     end
 
-    % --- Condition number ratio ---
-    pos_kappas = kappa_vec(kappa_vec > 0);
-    if ~isempty(pos_kappas)
-        min_kap = min(pos_kappas);
-        for mi = 1:N_METHODS
-            if kappa_vec(mi) / min_kap > THRESH_KAPPA_RATIO
+    % --- Condition number ratio among fast methods only ---
+    pos_fk = fast_kappa(fast_kappa > 0);
+    if ~isempty(pos_fk)
+        min_fk = min(pos_fk);
+        for k = 1:numel(FAST_IDX)
+            mi = FAST_IDX(k);
+            if fast_kappa(k) / min_fk > THRESH_KAPPA_RATIO
                 score = score + 1;
                 details{end+1} = sprintf('%s kappa=%.1f  (%.1fx above min=%.1f)  (+1)', ...
-                    METHODS{mi}, kappa_vec(mi), kappa_vec(mi)/min_kap, min_kap);
+                    METHODS{mi}, fast_kappa(k), fast_kappa(k)/min_fk, min_fk);
             end
         end
     end
 
-    % --- Solve time ratio ---
-    pos_times = time_vec(time_vec > 0);
-    if ~isempty(pos_times)
-        min_time = min(pos_times);
-        for mi = 1:N_METHODS
-            if time_vec(mi) / min_time > THRESH_TIME_RATIO
+    % --- Solve time ratio among fast methods only ---
+    pos_ft = fast_times(fast_times > 0);
+    if ~isempty(pos_ft)
+        min_ft = min(pos_ft);
+        for k = 1:numel(FAST_IDX)
+            mi = FAST_IDX(k);
+            if fast_times(k) / min_ft > THRESH_TIME_RATIO
                 score = score + 1;
-                details{end+1} = sprintf('%s time=%.4fs  (%.1fx above fastest=%.4fs)  (+1)', ...
-                    METHODS{mi}, time_vec(mi), time_vec(mi)/min_time, min_time);
+                details{end+1} = sprintf('%s time=%.4fs  (%.1fx above fastest fast-method=%.4fs)  (+1)', ...
+                    METHODS{mi}, fast_times(k), fast_times(k)/min_ft, min_ft);
             end
         end
     end
@@ -262,7 +289,7 @@ end
 %% ========================================================================
 
 [sorted_scores, sort_idx] = sort(interest_score, 'descend');
-n_interesting = sum(sorted_scores > 0);
+n_interesting = sum(sorted_scores >= MIN_INTERESTING_SCORE);
 
 fprintf('%s\n', repmat('=',1,92));
 fprintf('  INTERESTING RUNS  (%d / %d points flagged)\n', n_interesting, N_POINTS);
@@ -307,7 +334,7 @@ fprintf('\n%s\n\n', repmat('=',1,92));
 %%  SECTION 8 — Optional animation of interesting runs
 %% ========================================================================
 
-if ANIMATE_INTERESTING && n_interesting > 0
+if ANIMATE_INTERESTING && n_interesting > 0  % n_interesting already respects MIN_INTERESTING_SCORE
     fprintf('Animating all 4 methods for each of the %d interesting points...\n\n', ...
             n_interesting);
 
