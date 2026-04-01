@@ -22,16 +22,16 @@ addpath('.');
 %%  CONFIGURATION — edit here to switch method / scenario
 %% ========================================================================
 
-if ~exist('METHOD','var'), METHOD = 'NR'; end  % override from run_all_ik if pre-set
-RECORD      = true;      % true = save .avi video
-VIDEO_FILE  = ['ik_anim_' lower(METHOD) '.avi'];
-FPS         = 8;         % output video frame rate
-STRIDE      = 1;         % show every Nth iteration  (set >1 to thin JT frames)
-HOLD_FRAMES = 14;        % extra frames held on final converged pose
+if ~exist('METHOD',    'var'), METHOD     = 'NR'; end
+if ~exist('RECORD',    'var'), RECORD     = true; end
+if ~exist('VIDEO_FILE','var'), VIDEO_FILE = ['ik_anim_' lower(METHOD) '.avi']; end
+FPS         = 8;
+STRIDE      = 1;
+HOLD_FRAMES = 14;
 
-robot      = KR120_params();
-THETA_0    = zeros(6,1);                              % home configuration (all joints zero)
-THETA_GOAL = [pi/2; -pi/4; pi/3; pi/4; pi/4; pi/6]; % goal: 90 deg J1 sweep + arm bend
+robot = KR120_params();
+if ~exist('THETA_0',   'var'), THETA_0    = zeros(6,1); end
+if ~exist('THETA_GOAL','var'), THETA_GOAL = [pi/2; -pi/4; pi/3; pi/4; pi/4; pi/6]; end
 
 %% ---- Mesh overlay (matches robot_animation.m) ----
 MESH_SCALE = 1.0;
