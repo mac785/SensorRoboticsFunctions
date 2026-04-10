@@ -1,12 +1,14 @@
 %% ----------- ADJUST THIS -----------
 clear
-% Provide cal_body_data path and cal_readings_data path from current folder
-body_path = "calbody/pa1-debug-b-calbody.txt";
-reading_path = "calreadings/pa1-debug-b-calreadings.txt";
+% Provide cal_body_data path, cal_readings_data, and  path from current folder
+body_path = "calbody/pa1-debug-a-calbody.txt";
+reading_path = "calreadings/pa1-debug-a-calreadings.txt";
+output_path = "output/pa1-debug-a-output1.txt";
 %-------- SOLVE ------
 % Extract data from files
 [N_body,d,a,c] = cal_body_data(body_path);
 [N_readings,frame_data] = cal_readings_data(reading_path);
+[~,~,~,output_frame_data] = output_1_data(output_path);
 Nframes = N_readings(4);
 N_c = N_body(3);
 %solve for C_i_expected
@@ -35,5 +37,5 @@ for i = 1:Nframes
    end
    C_i_exp_array{i} = C_i_exp_matrix(:,1:3);
 
-   error_array{i} = mean(frame_data{i}.C - C_i_exp_matrix(:,1:3),1);
+   error_array{i} = mean(output_frame_data{i}.C - C_i_exp_matrix(:,1:3),1);
 end
