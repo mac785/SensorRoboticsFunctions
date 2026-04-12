@@ -83,7 +83,7 @@ function [T, results] = eyeinhand_cal(q_Robot_config,q_camera_config,t_Robot_con
         % 
         M(idx,:) = M_i; %make M
 
-        %for later - find P_b_k_matrix and P_a_k_matrix
+        %for later - find P_b_k_matrix and P_a_k_matrix. UNSURE OF THE EXACT ORDER OF SUBTRACTION
         P_A_matrix(i,:) = t_Robot_config(i,:) - t_Robot_config(i+1,:); %consecutive robot translation
         P_B_matrix(i,:) = t_camera_config(i,:) - t_camera_config(i+1,:); %consecutive camera translation
     end
