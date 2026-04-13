@@ -76,7 +76,7 @@ function [T, results] = eyeinhand_cal(q_Robot_config,q_camera_config,t_Robot_con
         M_1 = (S_a - S_b);
         M_2 = -(V_a - V_b)';
         M_3 = (V_a - V_b);
-        M_4 = (S_a-S_b)*eye(3) + vec2skew(V_a + V_b);
+        M_4 = (S_a-S_b)*eye(3) + vecToSO3(V_a + V_b);
 
         M_i = [M_1 M_2; M_3 M_4];
         idx = (i-1)*block_size + (1:block_size);
