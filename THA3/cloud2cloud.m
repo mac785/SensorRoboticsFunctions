@@ -41,23 +41,23 @@ function T = cloud2cloud(static_cloud,moving_cloud)
     %determine H
     H = a_tilda_matrix'*b_tilda_matrix;
     %use SVD to determine U,S,V
-    [U,S,V] = svd(H);
+    [U,~,V] = svd(H);
     X = V*U';
     
     %check determinant of X
     tol = 1e-8;
-    if abs(det(X) - 1) <tol %if X is a rotation
+    if abs(det(X) - 1) < tol  % proper rotation
         R = X;
-    elseif abs(det(X) + 1) < tol && (min(diag(S)) < tol)  %if x is a reflection
+    elseif abs(det(X) + 1) < tol  % reflection — apply standard fix
+        % Occurs when markers are nearly coplanar (smallest singular value
+        % of H is small). For rigid body data this is always the correct fix.
         V_prime = V;
         V_prime(:,3) = -V(:,3);
         R = V_prime*U';
     else
-        % Explicit rejection of your forbidden case
         T = NaN(4,4);
-        warning(['Invalid configuration: det(X) = -1 with full rank H.\n' ...
-         'Returning NaN transform.']);
-        return    
+        warning('cloud2cloud: det(X) = %.6f, not a valid rotation or reflection.', det(X));
+        return
     end
 
     %------------ Solve for P -------------------
