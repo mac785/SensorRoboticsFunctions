@@ -26,7 +26,7 @@ function [P_em, P_opt, C_expected] = pa1_solve(pfx, out_path)
     %----------------------------------------------------
     % 1. Load data
     %----------------------------------------------------
-    [N_body, d, a, c]       = cal_body_data   ([pfx 'calbody.txt']);
+    [N_body, d, a, c]        = cal_body_data   ([pfx 'calbody.txt']);
     [N_read, frame_data]    = cal_readings_data([pfx 'calreadings.txt']);
     [~, ~, G_frames]        = empivot_data    ([pfx 'empivot.txt']);
     [~, ~, ~, opt_frames]   = optpivot_data   ([pfx 'optpivot.txt']);
