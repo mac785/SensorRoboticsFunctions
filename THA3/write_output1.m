@@ -15,12 +15,12 @@ function write_output1(path, P_em, P_opt, C_expected)
     % Line 3:  P_opt (x, y, z)
     % Lines 4+: N_c rows per frame, all frames concatenated
 
-    N_frames = numel(C_expected);
-    N_c      = size(C_expected{1}, 1);
+    N_frames = double(numel(C_expected));
+    N_c      = double(size(C_expected{1}, 1));
 
     % extract just the filename for the header
     [~, fname, ext] = fileparts(path);
-    header_name = [fname ext];
+    header_name = char([fname ext]);
 
     fid = fopen(path, 'w');
     if fid == -1
