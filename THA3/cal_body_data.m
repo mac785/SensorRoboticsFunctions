@@ -32,9 +32,9 @@ function [N,d,a,c] = cal_body_data(path)
     N = [Nd Na Nc];
     %convert file to matrix - this will (should) ignore first row b/c
     %string
-    M = readmatrix(path);
+    M = readmatrix(path, 'NumHeaderLines', 1);
     %extract d, a, c
-    d = M((1:Nd),:);
-    a = M((Nd+1:Nd + Na),:);
-    c = M((Nd + 1 + Na:Nd + Na+ Nc),:);
+    d = M(1:Nd, :);
+    a = M(Nd+1:Nd+Na, :);
+    c = M(Nd+Na+1:Nd+Na+Nc, :);
 end
