@@ -83,9 +83,13 @@ function [T, results] = eyeinhand_cal(q_Robot_config,q_camera_config,t_Robot_con
         % 
         M(idx,:) = M_i; %make M
 
-        %for later - find P_b_k_matrix and P_a_k_matrix. UNSURE OF THE EXACT ORDER OF SUBTRACTION
-        P_A_matrix(i,:) = t_Robot_config(i,:) - t_Robot_config(i+1,:); %consecutive robot translation
-        P_B_matrix(i,:) = t_camera_config(i,:) - t_camera_config(i+1,:); %consecutive camera translation
+        % Translation components of A = E_i^{-1}*E_{i+1} and B = S_i*S_{i+1}^{-1}.
+        % Original code used simple differences (t_i - t_{i+1}), which is incorrect.
+        % Correct derivation:
+        %   p_a = R_Ei^T * (t_{i+1,E} - t_{i,E})  [translation part of A]
+        %   p_b = t_{i,S} - R_b * t_{i+1,S}        [translation part of B]
+        P_A_matrix(i,:) = (R_E_array(:,:,i)' * (t_Robot_config(i+1,:) - t_Robot_config(i,:))')';
+        P_B_matrix(i,:) = (t_camera_config(i,:)' - R_b * t_camera_config(i+1,:)')';
     end
 
     %1.3 - Do SVD to get V
