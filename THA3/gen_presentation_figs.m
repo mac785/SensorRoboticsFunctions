@@ -29,7 +29,7 @@ end
 %% =========================================================
 %  FIGURE 1: PA2 Comparison Bar Chart
 % =========================================================
-fig1 = figure('Position', [50 50 1050 440], 'Color', 'w');
+fig1 = figure('Position', [50 50 1800 700], 'Color', 'w');
 
 labels = {'Clean (N=10)', 'Noisy (N=10)', 'Noisy (N=5)'};
 colors = [0.22 0.50 0.80; 0.95 0.60 0.10; 0.82 0.22 0.22];
@@ -58,7 +58,7 @@ end
 sgtitle('PA2 Eye-in-Hand: Effect of Noise and Reduced Configurations', ...
     'FontSize', 13, 'FontWeight', 'bold', 'Color', 'k');
 
-exportgraphics(fig1, fullfile(out_dir, 'fig1_pa2_comparison.png'), 'Resolution', 150);
+exportgraphics(fig1, fullfile(out_dir, 'fig1_pa2_comparison.png'), 'Resolution', 96);
 fprintf('[1/5] Saved fig1_pa2_comparison.png\n');
 
 %% =========================================================
@@ -85,48 +85,59 @@ C_meas_a = fr_a{1}.C;
 C_exp_g  = compute_Cexp(d_g, a_g, c_g, fr_g{1});
 C_meas_g = fr_g{1}.C;
 
-fig2 = figure('Position', [50 50 1100 500], 'Color', 'w');
+fig2 = figure('Position', [50 50 1800 950], 'Color', 'w');
 
 subtitles2 = {'Dataset-a  (Clean,  max err = 0.007 mm)', ...
               'Dataset-g  (Distorted,  max err = 4.74 mm)'};
 Ce_list = {C_exp_a, C_exp_g};
 Cm_list = {C_meas_a, C_meas_g};
 
+h_exp = []; h_meas = []; ax2_handles = gobjects(1,2);
 for col = 1:2
-    ax = subplot(1,2,col);
+    axc = subplot(1,2,col);
+    ax2_handles(col) = axc;
     Ce = Ce_list{col};  Cm = Cm_list{col};
 
     hold on;
-    % Draw connecting lines first (hidden from legend)
     for j = 1:size(Ce,1)
         h = plot3([Ce(j,1) Cm(j,1)], [Ce(j,2) Cm(j,2)], [Ce(j,3) Cm(j,3)], ...
             'k-', 'LineWidth', 0.8);
         h.Color(4) = 0.35;
         h.HandleVisibility = 'off';
     end
-    scatter3(Ce(:,1), Ce(:,2), Ce(:,3), 60, [0.15 0.45 0.80], 'filled', ...
-        'DisplayName', 'C_{expected}');
-    scatter3(Cm(:,1), Cm(:,2), Cm(:,3), 60, [0.85 0.20 0.20], '^', 'filled', ...
-        'DisplayName', 'C_{measured}');
+    hs_exp  = scatter3(Ce(:,1), Ce(:,2), Ce(:,3), 60, [0.15 0.45 0.80], 'filled');
+    hs_meas = scatter3(Cm(:,1), Cm(:,2), Cm(:,3), 60, [0.85 0.20 0.20], '^', 'filled');
     hold off;
 
-    fix_axes(ax);
+    fix_axes(axc);
     xlabel('X (mm)'); ylabel('Y (mm)'); zlabel('Z (mm)');
-    title(subtitles2{col}, 'FontSize', 11);
-    wlegend('Location', 'best', 'FontSize', 10);
+    title(subtitles2{col}, 'FontSize', 13, 'FontWeight', 'bold');
     grid on; axis equal; view(35, 22);
+
+    if col == 1
+        h_exp = hs_exp;  h_meas = hs_meas;
+    end
 end
 
-sgtitle('EM Distortion: C_{expected} (optical) vs C_{measured} (EM sensor)', ...
-    'FontSize', 13, 'FontWeight', 'bold', 'Color', 'k');
+% Push subplots up to open clear space at the bottom for the legend
+set(ax2_handles(1), 'Position', [0.06  0.18  0.42  0.72]);
+set(ax2_handles(2), 'Position', [0.54  0.18  0.42  0.72]);
 
-exportgraphics(fig2, fullfile(out_dir, 'fig2_em_distortion.png'), 'Resolution', 150);
+% Single shared legend — horizontal strip at bottom center
+lg2 = legend([h_exp, h_meas], {'C_{expected}  (optical)', 'C_{measured}  (EM sensor)'}, ...
+    'Color','w', 'TextColor','k', 'EdgeColor',[0.6 0.6 0.6], 'FontSize', 13, ...
+    'Orientation', 'horizontal');
+lg2.Units = 'normalized';
+lg2.Position = [0.30 0.01 0.40 0.05];
+
+sgtitle('EM Distortion: C_{expected} vs C_{measured}', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'Color', 'k');
+
+exportgraphics(fig2, fullfile(out_dir, 'fig2_em_distortion.png'), 'Resolution', 96);
 fprintf('[2/5] Saved fig2_em_distortion.png\n');
 
 %% =========================================================
-%  FIGURE 3: Point Cloud Registration
-%  Show mean-centered clouds for "before", then overlaid in
-%  optical frame for "after", plus per-marker residuals.
+%  FIGURE 3: Point Cloud Registration — 2-panel
 % =========================================================
 [~, d, a, ~] = cal_body_data('HW3-PA1/pa1-debug-a-calbody.txt');
 [~, fr3]     = cal_readings_data('HW3-PA1/pa1-debug-a-calreadings.txt');
@@ -137,64 +148,126 @@ d_xfm  = (F_D * [d'; ones(1,size(d,1))])';
 d_xfm  = d_xfm(:,1:3);
 
 % Mean-center for "before" panel
-d_c    = d    - mean(d,1);
-D_c    = D_meas - mean(D_meas,1);
+d_c = d     - mean(d,1);
+D_c = D_meas - mean(D_meas,1);
 
-residuals = sqrt(sum((D_meas - d_xfm).^2, 2));
+fig3 = figure('Position', [50 50 1400 900], 'Color', 'w');
 
-fig3 = figure('Position', [50 50 1200 450], 'Color', 'w');
-
-% Panel 1: mean-centered (same shape, different frames)
-ax31 = subplot(1,3,1);
+% Panel 1: mean-centered — blue (reference) first, then red (measured)
+ax31 = subplot(1,2,1);
 hold on;
-scatter3(d_c(:,1), d_c(:,2), d_c(:,3), 90, [0.15 0.45 0.80], 'filled', ...
-    'DisplayName', 'd_{body} (mean-centered)');
-scatter3(D_c(:,1), D_c(:,2), D_c(:,3), 90, [0.85 0.20 0.20], '^', 'filled', ...
-    'DisplayName', 'D_{meas} (mean-centered)');
+hs3_ref = scatter3(d_c(:,1), d_c(:,2), d_c(:,3), 90, [0.15 0.45 0.80], 'filled');
+hs3_meas = scatter3(D_c(:,1), D_c(:,2), D_c(:,3), 90, [0.85 0.20 0.20], '^', 'filled');
 hold off;
 fix_axes(ax31);
-title('Before: Both Mean-Centered', 'FontSize', 12);
+title('Before Registration (Mean-Centered)', 'FontSize', 13, 'FontWeight', 'bold');
 xlabel('X (mm)'); ylabel('Y (mm)'); zlabel('Z (mm)');
-wlegend('Location', 'best', 'FontSize', 9);
 grid on; axis equal; view(35, 22);
 
-% Panel 2: after registration — transformed d overlaid on D_meas
-ax32 = subplot(1,3,2);
+% Panel 2: after — blue (transformed reference) first, then red (measured)
+ax32 = subplot(1,2,2);
 hold on;
-scatter3(D_meas(:,1), D_meas(:,2), D_meas(:,3), 90, [0.85 0.20 0.20], '^', 'filled', ...
-    'DisplayName', 'D_{measured}');
-scatter3(d_xfm(:,1), d_xfm(:,2), d_xfm(:,3), 90, [0.15 0.45 0.80], 'o', 'filled', ...
-    'DisplayName', 'd_{body} transformed');
+scatter3(d_xfm(:,1), d_xfm(:,2), d_xfm(:,3), 90, [0.15 0.45 0.80], 'o', 'filled');
+scatter3(D_meas(:,1), D_meas(:,2), D_meas(:,3), 90, [0.85 0.20 0.20], '^', 'filled');
 for j = 1:size(D_meas,1)
-    h = plot3([D_meas(j,1) d_xfm(j,1)], [D_meas(j,2) d_xfm(j,2)], ...
-              [D_meas(j,3) d_xfm(j,3)], 'k--', 'LineWidth', 1.0);
+    h = plot3([d_xfm(j,1) D_meas(j,1)], [d_xfm(j,2) D_meas(j,2)], ...
+              [d_xfm(j,3) D_meas(j,3)], 'k--', 'LineWidth', 1.0);
     h.Color(4) = 0.40;
     h.HandleVisibility = 'off';
 end
 hold off;
 fix_axes(ax32);
-title('After: F_D Applied (Optical Frame)', 'FontSize', 12);
+title('After Registration (F_D Applied)', 'FontSize', 13, 'FontWeight', 'bold');
 xlabel('X (mm)'); ylabel('Y (mm)'); zlabel('Z (mm)');
-wlegend('Location', 'best', 'FontSize', 9);
 grid on; axis equal; view(35, 22);
 
-% Panel 3: residuals — values are sub-nanometer (optical precision)
-ax33 = subplot(1,3,3);
-bar(residuals * 1e10, 'FaceColor', [0.15 0.45 0.80], 'EdgeColor', 'none');
-fix_axes(ax33);
-xlabel('Marker index', 'FontSize', 11);
-ylabel('Residual (\times10^{-10} mm)', 'FontSize', 11);
-title(sprintf('Per-marker Residuals\n(mean = %.2e mm)', mean(residuals)), 'FontSize', 12);
-ylim([0 max(residuals*1e10)*2 + 1e-3]);
-grid on; box off;
-text(4.5, max(ylim)*0.6, {'Optical tracker', 'sub-nanometer precision'}, ...
-    'HorizontalAlignment','center', 'FontSize', 10, 'Color', [0.3 0.3 0.3]);
+% Push subplots up to open clear space at the bottom for the legend
+set(ax31, 'Position', [0.06  0.18  0.42  0.72]);
+set(ax32, 'Position', [0.54  0.18  0.42  0.72]);
 
-sgtitle('cloud2cloud SVD Registration: Dataset-a, Frame 1 (D markers)', ...
-    'FontSize', 13, 'FontWeight', 'bold', 'Color', 'k');
+% Single shared legend — horizontal strip at bottom center
+lg3 = legend([hs3_ref, hs3_meas], ...
+    {'d_{body}  (known reference)', 'D_{measured}  (optical tracker)'}, ...
+    'Color','w', 'TextColor','k', 'EdgeColor',[0.6 0.6 0.6], 'FontSize', 13, ...
+    'Orientation', 'horizontal');
+lg3.Units = 'normalized';
+lg3.Position = [0.23 0.01 0.54 0.05];
 
-exportgraphics(fig3, fullfile(out_dir, 'fig3_point_cloud_registration.png'), 'Resolution', 150);
+sgtitle('cloud2cloud SVD Registration: Dataset-a, Frame 1', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'Color', 'k');
+
+exportgraphics(fig3, fullfile(out_dir, 'fig3_point_cloud_registration.png'), 'Resolution', 96);
 fprintf('[3/5] Saved fig3_point_cloud_registration.png\n');
+
+%% =========================================================
+%  FIGURE 3.1: Alternative Registration — EM probe, ~180 deg rotation
+%  Uses empivot G markers: frame 1 vs frame 2 (179.75 deg rotation)
+%  Much more dramatic before/after than the near-zero-rotation D example.
+% =========================================================
+[~, ~, G3] = empivot_data('HW3-PA1/pa1-debug-a-empivot.txt');
+G3_ref  = G3{1};
+G3_fr2  = G3{2};
+
+% Mean-center both for "before" panel
+G3_ref_c = G3_ref - mean(G3_ref, 1);
+G3_fr2_c = G3_fr2 - mean(G3_fr2, 1);
+
+% Solve registration and apply for "after" panel
+F3alt    = cloud2cloud(G3_ref, G3_fr2);
+G3_xfm   = (F3alt * [G3_ref'; ones(1, size(G3_ref,1))])';
+G3_xfm   = G3_xfm(:,1:3);
+
+fig3b = figure('Position', [50 50 1400 900], 'Color', 'w');
+
+% Panel 1: before — same shape, very different orientation (~180 deg)
+ax3b1 = subplot(1,2,1);
+hold on;
+hs3b_ref  = scatter3(G3_ref_c(:,1), G3_ref_c(:,2), G3_ref_c(:,3), ...
+    110, [0.15 0.45 0.80], 'filled');
+hs3b_meas = scatter3(G3_fr2_c(:,1), G3_fr2_c(:,2), G3_fr2_c(:,3), ...
+    110, [0.85 0.20 0.20], '^', 'filled');
+hold off;
+fix_axes(ax3b1);
+title('Before Registration  (\approx180\circ rotation)', 'FontSize', 13, 'FontWeight', 'bold');
+xlabel('X (mm)'); ylabel('Y (mm)'); zlabel('Z (mm)');
+grid on; axis equal; view(35, 22);
+
+% Panel 2: after — G_ref transformed onto G_fr2
+ax3b2 = subplot(1,2,2);
+hold on;
+scatter3(G3_xfm(:,1), G3_xfm(:,2), G3_xfm(:,3), ...
+    110, [0.15 0.45 0.80], 'o', 'filled');
+scatter3(G3_fr2(:,1),  G3_fr2(:,2),  G3_fr2(:,3), ...
+    110, [0.85 0.20 0.20], '^', 'filled');
+for j = 1:size(G3_fr2,1)
+    h = plot3([G3_xfm(j,1) G3_fr2(j,1)], [G3_xfm(j,2) G3_fr2(j,2)], ...
+              [G3_xfm(j,3) G3_fr2(j,3)], 'k--', 'LineWidth', 1.0);
+    h.Color(4) = 0.40;
+    h.HandleVisibility = 'off';
+end
+hold off;
+fix_axes(ax3b2);
+title('After Registration  (SVD solved)', 'FontSize', 13, 'FontWeight', 'bold');
+xlabel('X (mm)'); ylabel('Y (mm)'); zlabel('Z (mm)');
+grid on; axis equal; view(35, 22);
+
+% Push subplots up for legend space
+set(ax3b1, 'Position', [0.06  0.18  0.42  0.72]);
+set(ax3b2, 'Position', [0.54  0.18  0.42  0.72]);
+
+% Shared legend
+lg3b = legend([hs3b_ref, hs3b_meas], ...
+    {'g_{body}  (frame 1 reference)', 'G_{measured}  (frame 2, EM tracker)'}, ...
+    'Color','w', 'TextColor','k', 'EdgeColor',[0.6 0.6 0.6], 'FontSize', 13, ...
+    'Orientation', 'horizontal');
+lg3b.Units = 'normalized';
+lg3b.Position = [0.20 0.01 0.60 0.05];
+
+sgtitle('cloud2cloud SVD Registration: EM Probe Markers, Frames 1 \rightarrow 2  (\approx180\circ)', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'Color', 'k');
+
+exportgraphics(fig3b, fullfile(out_dir, 'fig3_1_registration_alt.png'), 'Resolution', 96);
+fprintf('[3.1] Saved fig3_1_registration_alt.png\n');
 
 %% =========================================================
 %  FIGURE 4: Pivot Calibration Sweep
@@ -214,7 +287,7 @@ for k = 1:N_piv
     tip_est(k,:) = pt(1:3)';
 end
 
-fig4 = figure('Position', [50 50 820 640], 'Color', 'w');
+fig4 = figure('Position', [50 50 1100 900], 'Color', 'w');
 ax4 = axes(fig4);
 hold on;
 
@@ -266,7 +339,7 @@ title({'Pivot Calibration: EM Probe — Dataset-a', ...
 wlegend('Location', 'northeast', 'FontSize', 10);
 grid on; view(30, 22);
 
-exportgraphics(fig4, fullfile(out_dir, 'fig4_pivot_calibration.png'), 'Resolution', 150);
+exportgraphics(fig4, fullfile(out_dir, 'fig4_pivot_calibration.png'), 'Resolution', 96);
 fprintf('[4/5] Saved fig4_pivot_calibration.png\n');
 
 %% =========================================================
@@ -276,7 +349,7 @@ R_x = [-0.00320  0.99999 -0.00011;
         -0.00077  0.00011  1.00000;
          0.99999  0.00320  0.00077];
 
-fig5 = figure('Position', [50 50 860 640], 'Color', 'w');
+fig5 = figure('Position', [50 50 1100 900], 'Color', 'w');
 ax5 = axes(fig5);
 hold on;
 
@@ -330,7 +403,7 @@ title({'PA2: Solved X  (Camera \rightarrow End-Effector)', ...
 wlegend('Location', 'southeast', 'FontSize', 11);
 grid on; view(20, 22); axis equal;
 
-exportgraphics(fig5, fullfile(out_dir, 'fig5_Rx_frame.png'), 'Resolution', 150);
+exportgraphics(fig5, fullfile(out_dir, 'fig5_Rx_frame.png'), 'Resolution', 96);
 fprintf('[5/5] Saved fig5_Rx_frame.png\n');
 
 fprintf('\nAll figures saved to: %s\n', out_dir);
