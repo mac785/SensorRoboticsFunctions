@@ -347,7 +347,7 @@ if ANIMATE_INTERESTING && n_interesting > 0  % n_interesting already respects MI
             THETA_0    = START_THETAS(pi_,:)';
             THETA_GOAL = GOAL_THETAS(pi_,:)';
             RECORD     = RECORD_ANIMATIONS;
-            VIDEO_FILE = sprintf('bench_anim_p%d_%s.avi', pi_, lower(METHOD));
+            VIDEO_FILE = fullfile('media', sprintf('bench_anim_p%d_%s.avi', pi_, lower(METHOD)));
 
             fprintf('  Animating [%s]', METHOD);
             if RECORD_ANIMATIONS

@@ -52,6 +52,7 @@ for vi=1:4
           'Color',[0.85 0.1 0.1],'MarkerFaceColor',[0.85 0.1 0.1]);
 end
 sgtitle(fig,'KR120 R2500 Pro — Home (theta=0)','Color','k','FontSize',13,'FontWeight','bold');
-saveas(fig,'fig_inspect_kr120_home.png');
+if ~exist('media','dir'), mkdir('media'); end
+saveas(fig, fullfile('media','fig_inspect_kr120_home.png'));
 close(fig);
-fprintf('Saved fig_inspect_kr120_home.png\n');
+fprintf('Saved %s\n', fullfile('media','fig_inspect_kr120_home.png'));

@@ -38,7 +38,7 @@ USE_RST = true;   % true  = RST renderer (DAE meshes, requires load_kr120_rst)
                   % false = skeleton + STL renderer
 
 RECORD     = true;                % true = save an .avi file
-VIDEO_FILE = sprintf('bench_anim_rank%d_%s.avi', RANK, lower(METHOD));
+VIDEO_FILE = fullfile('media', sprintf('bench_anim_rank%d_%s.avi', RANK, lower(METHOD)));
                                    % filename used when RECORD = true
 
 %% ========================================================================

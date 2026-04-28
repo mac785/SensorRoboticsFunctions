@@ -25,7 +25,8 @@ addpath('.');
 
 if ~exist('METHOD',    'var'), METHOD     = 'NR'; end
 if ~exist('RECORD',    'var'), RECORD     = true; end
-if ~exist('VIDEO_FILE','var'), VIDEO_FILE = ['ik_anim_rst_' lower(METHOD) '.avi']; end
+if ~exist('media','dir'), mkdir('media'); end
+if ~exist('VIDEO_FILE','var'), VIDEO_FILE = fullfile('media', ['ik_anim_rst_' lower(METHOD) '.avi']); end
 FPS         = 8;
 STRIDE      = 1;
 HOLD_FRAMES = 14;

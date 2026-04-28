@@ -8,6 +8,8 @@
 %   matlab -batch "addpath('.'); run('render_all_figs.m')"
 
 addpath('.');
+OUT_DIR = 'media';
+if ~exist(OUT_DIR, 'dir'), mkdir(OUT_DIR); end
 robot = KR120_params();
 
 %% ---- Load meshes once ----
@@ -44,60 +46,60 @@ FK_space(robot.M, robot.Slist, theta_home, true, robot.q_joints);
 fig = gcf;  fig.Position = [0 0 1200 700];
 title('(b) FK\_space — Home configuration (\theta = 0)');
 add_meshes(gca, meshes, mesh_T0, theta_home, robot.Slist, MESH_SCALE, MESH_COLOR, MESH_ALPHA);
-print(fig, 'fig_b_fkspace_home', '-dpng', '-r150');  close(fig);
-fprintf('Saved fig_b_fkspace_home.png\n');
+print(fig, fullfile(OUT_DIR,'fig_b_fkspace_home'), '-dpng', '-r150');  close(fig);
+fprintf('Saved %s\n', fullfile(OUT_DIR,'fig_b_fkspace_home.png'));
 
 FK_space(robot.M, robot.Slist, theta_bent, true, robot.q_joints);
 fig = gcf;  fig.Position = [0 0 1200 700];
 title('(b) FK\_space — Bent configuration');
 add_meshes(gca, meshes, mesh_T0, theta_bent, robot.Slist, MESH_SCALE, MESH_COLOR, MESH_ALPHA);
-print(fig, 'fig_b_fkspace_bent', '-dpng', '-r150');  close(fig);
-fprintf('Saved fig_b_fkspace_bent.png\n');
+print(fig, fullfile(OUT_DIR,'fig_b_fkspace_bent'), '-dpng', '-r150');  close(fig);
+fprintf('Saved %s\n', fullfile(OUT_DIR,'fig_b_fkspace_bent.png'));
 
 %% ---- (c) FK_body ----
 FK_body(robot.M, robot.Blist, theta_home, true, robot.q_joints);
 fig = gcf;  fig.Position = [0 0 1200 700];
 title('(c) FK\_body — Home configuration (\theta = 0)');
 add_meshes(gca, meshes, mesh_T0, theta_home, robot.Slist, MESH_SCALE, MESH_COLOR, MESH_ALPHA);
-print(fig, 'fig_c_fkbody_home', '-dpng', '-r150');  close(fig);
-fprintf('Saved fig_c_fkbody_home.png\n');
+print(fig, fullfile(OUT_DIR,'fig_c_fkbody_home'), '-dpng', '-r150');  close(fig);
+fprintf('Saved %s\n', fullfile(OUT_DIR,'fig_c_fkbody_home.png'));
 
 FK_body(robot.M, robot.Blist, theta_bent, true, robot.q_joints);
 fig = gcf;  fig.Position = [0 0 1200 700];
 title('(c) FK\_body — Bent configuration');
 add_meshes(gca, meshes, mesh_T0, theta_bent, robot.Slist, MESH_SCALE, MESH_COLOR, MESH_ALPHA);
-print(fig, 'fig_c_fkbody_bent', '-dpng', '-r150');  close(fig);
-fprintf('Saved fig_c_fkbody_bent.png\n');
+print(fig, fullfile(OUT_DIR,'fig_c_fkbody_bent'), '-dpng', '-r150');  close(fig);
+fprintf('Saved %s\n', fullfile(OUT_DIR,'fig_c_fkbody_bent.png'));
 
 %% ---- (g) Ellipsoids — non-singular ----
 ellipsoid_plot_angular(robot, theta_ns);
 fig = gcf;  fig.Position = [0 0 1200 700];
 title('(g) Angular Velocity Manipulability Ellipsoid — Non-singular');
 add_meshes(gca, meshes, mesh_T0, theta_ns, robot.Slist, MESH_SCALE, MESH_COLOR, MESH_ALPHA);
-print(fig, 'fig_g_ellipsoid_angular_ns', '-dpng', '-r150');  close(fig);
-fprintf('Saved fig_g_ellipsoid_angular_ns.png\n');
+print(fig, fullfile(OUT_DIR,'fig_g_ellipsoid_angular_ns'), '-dpng', '-r150');  close(fig);
+fprintf('Saved %s\n', fullfile(OUT_DIR,'fig_g_ellipsoid_angular_ns.png'));
 
 ellipsoid_plot_linear(robot, theta_ns);
 fig = gcf;  fig.Position = [0 0 1200 700];
 title('(g) Linear Velocity Manipulability Ellipsoid — Non-singular');
 add_meshes(gca, meshes, mesh_T0, theta_ns, robot.Slist, MESH_SCALE, MESH_COLOR, MESH_ALPHA);
-print(fig, 'fig_g_ellipsoid_linear_ns', '-dpng', '-r150');  close(fig);
-fprintf('Saved fig_g_ellipsoid_linear_ns.png\n');
+print(fig, fullfile(OUT_DIR,'fig_g_ellipsoid_linear_ns'), '-dpng', '-r150');  close(fig);
+fprintf('Saved %s\n', fullfile(OUT_DIR,'fig_g_ellipsoid_linear_ns.png'));
 
 %% ---- (g) Ellipsoids — bent ----
 ellipsoid_plot_angular(robot, theta_bent);
 fig = gcf;  fig.Position = [0 0 1200 700];
 title('(g) Angular Velocity Manipulability Ellipsoid — Bent config');
 add_meshes(gca, meshes, mesh_T0, theta_bent, robot.Slist, MESH_SCALE, MESH_COLOR, MESH_ALPHA);
-print(fig, 'fig_g_ellipsoid_angular_bent', '-dpng', '-r150');  close(fig);
-fprintf('Saved fig_g_ellipsoid_angular_bent.png\n');
+print(fig, fullfile(OUT_DIR,'fig_g_ellipsoid_angular_bent'), '-dpng', '-r150');  close(fig);
+fprintf('Saved %s\n', fullfile(OUT_DIR,'fig_g_ellipsoid_angular_bent.png'));
 
 ellipsoid_plot_linear(robot, theta_bent);
 fig = gcf;  fig.Position = [0 0 1200 700];
 title('(g) Linear Velocity Manipulability Ellipsoid — Bent config');
 add_meshes(gca, meshes, mesh_T0, theta_bent, robot.Slist, MESH_SCALE, MESH_COLOR, MESH_ALPHA);
-print(fig, 'fig_g_ellipsoid_linear_bent', '-dpng', '-r150');  close(fig);
-fprintf('Saved fig_g_ellipsoid_linear_bent.png\n');
+print(fig, fullfile(OUT_DIR,'fig_g_ellipsoid_linear_bent'), '-dpng', '-r150');  close(fig);
+fprintf('Saved %s\n', fullfile(OUT_DIR,'fig_g_ellipsoid_linear_bent.png'));
 
 %% ---- Mesh inspection (4-view headless) ----
 run('mesh_inspect.m');
