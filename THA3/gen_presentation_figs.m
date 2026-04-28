@@ -3,7 +3,7 @@
 % Run from the THA3/ directory.
 
 clear; clc; clear cd;
-addpath(fullfile(fileparts(mfilename('fullpath')), '..'));
+addpath(fullfile(fileparts(mfilename('fullpath')), '../THA2'));
 
 out_dir = fullfile(fileparts(mfilename('fullpath')), 'presentation_graphics');
 if ~exist(out_dir, 'dir'), mkdir(out_dir); end

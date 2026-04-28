@@ -11,8 +11,9 @@
 
 clear; clc;
 
-% Add parent directory for shared helpers (quat2rotm_my, etc.)
-addpath(fullfile(fileparts(mfilename('fullpath')), '..'));
+% Add THA1 and THA2 for shared helpers (quat2rotm_my, vecToSO3, etc.)
+addpath(fullfile(fileparts(mfilename('fullpath')), '../THA1'));
+addpath(fullfile(fileparts(mfilename('fullpath')), '../THA2'));
 addpath(fullfile(fileparts(mfilename('fullpath')), 'HW3-PA2'));
 
 %% =========================================================
