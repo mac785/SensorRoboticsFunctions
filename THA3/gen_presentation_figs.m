@@ -4,6 +4,7 @@
 
 clear; clc; clear cd;
 addpath(fullfile(fileparts(mfilename('fullpath')), '../THA2'));
+addpath(fullfile(fileparts(mfilename('fullpath')), '../THA2/helpers'));
 
 out_dir = fullfile(fileparts(mfilename('fullpath')), 'presentation_graphics');
 if ~exist(out_dir, 'dir'), mkdir(out_dir); end

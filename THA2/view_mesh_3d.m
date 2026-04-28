@@ -9,15 +9,20 @@
 %   >> view_mesh_3d
 %   >> USE_RST = false; view_mesh_3d
 
-addpath('.');
+addpath('.')
+addpath('helpers');
 robot = KR120_params();
 if ~exist('USE_RST','var'), USE_RST = true; end
 
 if USE_RST
     rbt = load_kr120_rst();
-    figure('Name','KR120 R2500 Pro — RST Viewer','Color','w');
-    show(rbt, homeConfiguration(rbt));
-    title('KR120 R2500 Pro — Home config (theta = 0)');
+    fig = figure('Name','KR120 R2500 Pro — RST Viewer','Color','w');
+    ax  = axes('Parent',fig);
+    show(rbt, homeConfiguration(rbt), 'Parent',ax, ...
+         'PreservePlot',false, 'Visuals','on','Frames','off');
+    set(ax,'Color','w','XColor','k','YColor','k','ZColor','k', ...
+           'GridColor',[0.82 0.82 0.82]);
+    title(ax,'KR120 R2500 Pro — Home config (theta = 0)','Color','k');
     fprintf('Viewer open — use mouse to rotate/pan/zoom.\n');
     return
 end

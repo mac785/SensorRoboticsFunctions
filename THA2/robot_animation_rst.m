@@ -8,7 +8,8 @@
 %   >> robot_animation_rst
 
 clc; close all;
-addpath('.');
+addpath('.')
+addpath('helpers');
 robot = KR120_params();
 rbt   = load_kr120_rst();
 
@@ -33,6 +34,10 @@ if FAST_TEST
     N_PER_SEG = 4;
     N_INTERP  = 8;
 end
+
+% Which shapes to run: 1=Circle 2=Square 3=Helix 4=Snake
+% Override before running: SHAPES_TO_RUN = 2; robot_animation_rst
+if ~exist('SHAPES_TO_RUN','var'), SHAPES_TO_RUN = 1:4; end
 
 RECORD  = false;
 VID_FPS = 30;
@@ -85,7 +90,7 @@ shapes = {
 };
 
 %% ---- Main loop ----
-for s = 1:numel(shapes)
+for s = SHAPES_TO_RUN
     shape = shapes{s};
     wp    = shape.pts;
     n_wp  = size(wp, 2);
@@ -161,6 +166,12 @@ for s = 1:numel(shapes)
         %% RST robot render
         show(rbt, thetalist(:)', 'Parent',ax, ...
              'PreservePlot',true, 'Visuals','on', 'Frames','off');
+
+        %% Restore view settings overwritten by show()
+        set(ax,'Color','w','XColor','k','YColor','k','ZColor','k', ...
+               'GridColor',[0.82 0.82 0.82]);
+        view(ax,[-35 25]);
+        xlim(ax,[-0.5 3.5]); ylim(ax,[-2 2]); zlim(ax,[-0.5 3]);
 
         %% Close any stray figures opened by show()
         all_figs = findall(0,'Type','figure');

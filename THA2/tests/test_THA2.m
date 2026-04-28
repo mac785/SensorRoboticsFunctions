@@ -2,7 +2,7 @@
 % One-stop test runner for ME397 THA2 Programming Assignment.
 % Robot: KUKA KR120 R2500 Pro (Quantec Nano)
 %
-% Run this file from the SensorRoboticsFunctions directory:
+% Run this file from the THA2/tests/ directory:
 %   >> test_THA2
 %
 % Each section corresponds to a PA part (a, b, c, ...).
@@ -11,7 +11,8 @@
 % in headless/batch mode.
 
 clc;
-addpath('.');      % ensure helpers are on path
+addpath('..');          % THA2 root (kinematics, FK, IK functions)
+addpath('../helpers');  % math primitives
 
 %% ---- Test bookkeeping ----
 results = struct('label', {}, 'pass', {}, 'detail', {});

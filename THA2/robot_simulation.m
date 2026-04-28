@@ -14,7 +14,8 @@
 %   >> robot_simulation
 
 clc;
-addpath('.');
+addpath('.')
+addpath('helpers');
 robot = KR120_params();
 
 %% ---- 1. Define Cartesian waypoints ----

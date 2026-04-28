@@ -5,7 +5,8 @@
 %   >> run_all_ik_rst
 
 clc; close all;
-addpath('.');
+addpath('.')
+addpath('helpers');
 
 robot      = KR120_params();
 THETA_0    = zeros(6,1);

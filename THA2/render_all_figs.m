@@ -5,9 +5,11 @@
 % then export with print (reliable in headless -batch mode).
 %
 % Run from SensorRoboticsFunctions/:
-%   matlab -batch "addpath('.'); run('render_all_figs.m')"
+%   matlab -batch "addpath('.')
+addpath('helpers'); run('render_all_figs.m')"
 
-addpath('.');
+addpath('.')
+addpath('helpers');
 if ~exist('USE_RST','var'), USE_RST = true; end
 OUT_DIR = 'media';
 if ~exist(OUT_DIR, 'dir'), mkdir(OUT_DIR); end
@@ -107,7 +109,7 @@ fprintf('Saved %s\n', fullfile(OUT_DIR,'fig_g_ellipsoid_linear_bent.png'));
 if USE_RST
     run('mesh_inspect_rst.m');
 else
-    run('Archive/mesh_inspect.m');
+    eval(fileread('Archive/mesh_inspect.m'));
 end
 
 fprintf('\nAll figures saved.\n');

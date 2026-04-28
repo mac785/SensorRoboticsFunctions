@@ -17,7 +17,8 @@
 %   METHOD = 'DLS'; ik_animation_rst;
 
 close all;
-addpath('.');
+addpath('.')
+addpath('helpers');
 
 %% ========================================================================
 %%  CONFIGURATION — edit here to switch method / scenario

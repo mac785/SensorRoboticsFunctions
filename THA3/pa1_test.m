@@ -15,6 +15,7 @@ clear; clc;
 % Add THA2 so shared helpers (inv_transform, etc.) are found
 % regardless of how/where MATLAB launched this script.
 addpath(fullfile(fileparts(mfilename('fullpath')), '../THA2'));
+addpath(fullfile(fileparts(mfilename('fullpath')), '../THA2/helpers'));
 
 DATA_DIR  = 'HW3-PA1/';
 OUT_DIR   = 'output/';

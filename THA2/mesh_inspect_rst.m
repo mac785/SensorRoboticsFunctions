@@ -5,7 +5,8 @@
 % Run from the THA2/ directory:
 %   >> mesh_inspect_rst
 
-addpath('.');
+addpath('.')
+addpath('helpers');
 rbt    = load_kr120_rst();
 config = homeConfiguration(rbt);
 
@@ -17,9 +18,9 @@ fig = figure('Color','w','Visible','off','Position',[0 0 1600 900]);
 for vi = 1:4
     ax = subplot(1,4,vi,'Parent',fig);
     show(rbt, config, 'Parent',ax, 'PreservePlot',false, 'Visuals','on', 'Frames','off');
+    set(ax,'Color','w','XColor','k','YColor','k','ZColor','k','GridColor',[0.82 0.82 0.82]);
     title(ax, views{vi,2}, 'Color','k','FontSize',10);
     view(ax, views{vi,1});
-    set(ax,'Color','w','XColor','k','YColor','k','ZColor','k');
 end
 sgtitle(fig,'KR120 R2500 Pro — Home (theta = 0)', ...
         'Color','k','FontSize',13,'FontWeight','bold');

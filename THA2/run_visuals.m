@@ -11,7 +11,8 @@
 %   >> run_visuals
 
 clc;
-addpath('.');
+addpath('.')
+addpath('helpers');
 robot = KR120_params();
 
 % -----------------------------------------------------------------------

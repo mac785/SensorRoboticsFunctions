@@ -27,7 +27,8 @@
 %   >> ANIMATE_INTERESTING = true; USE_RST = true; benchmark_ik
 
 clc; close all;
-addpath('.');
+addpath('.')
+addpath('helpers');
 
 %% ========================================================================
 %%  SECTION 1 — Configuration
