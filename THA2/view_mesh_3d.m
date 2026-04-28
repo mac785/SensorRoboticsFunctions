@@ -1,12 +1,28 @@
 %% view_mesh_3d.m
-% Opens an interactive 3-D figure of the KR120 R2500 Pro with translucent STL meshes.
+% Opens an interactive 3-D figure of the KR120 R2500 Pro.
 % Pan/rotate/zoom using the figure toolbar.
 %
-% Run from SensorRoboticsFunctions/:
-%   matlab -r "run('view_mesh_3d.m')"
+%   USE_RST = true  (default) — RST renderer via importrobot/show
+%   USE_RST = false            — manual STL patch renderer
+%
+% Run from the THA2/ directory:
+%   >> view_mesh_3d
+%   >> USE_RST = false; view_mesh_3d
 
 addpath('.');
 robot = KR120_params();
+if ~exist('USE_RST','var'), USE_RST = true; end
+
+if USE_RST
+    rbt = load_kr120_rst();
+    figure('Name','KR120 R2500 Pro — RST Viewer','Color','w');
+    show(rbt, homeConfiguration(rbt));
+    title('KR120 R2500 Pro — Home config (theta = 0)');
+    fprintf('Viewer open — use mouse to rotate/pan/zoom.\n');
+    return
+end
+
+%% STL path
 
 MESH_SCALE = 1.0;
 MESH_ALPHA = 0.30;

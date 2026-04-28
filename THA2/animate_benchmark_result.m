@@ -34,9 +34,6 @@ METHOD = 'RR';  % which IK method to animate:
 %%  ANIMATION OPTIONS
 %% ========================================================================
 
-USE_RST = true;   % true  = RST renderer (DAE meshes, requires load_kr120_rst)
-                  % false = skeleton + STL renderer
-
 RECORD     = true;                % true = save an .avi file
 VIDEO_FILE = fullfile('media', sprintf('bench_anim_rank%d_%s.avi', RANK, lower(METHOD)));
                                    % filename used when RECORD = true
@@ -60,8 +57,4 @@ fprintf('  Goal:  [%s] rad\n', num2str(THETA_GOAL', '%.3f  '));
 %%  RUN ANIMATION
 %% ========================================================================
 
-if USE_RST
-    ik_animation_rst;
-else
-    ik_animation;
-end
+ik_animation_rst;

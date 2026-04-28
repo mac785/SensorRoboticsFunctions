@@ -42,7 +42,7 @@ if ~exist('THRESH_KAPPA_RATIO', 'var'), THRESH_KAPPA_RATIO = 5.0;    end
 if ~exist('THRESH_TIME_RATIO',  'var'), THRESH_TIME_RATIO  = 50.0;   end  % mirrors iter ratio
 if ~exist('MIN_INTERESTING_SCORE','var'), MIN_INTERESTING_SCORE = 2;  end  % require multiple flags
 if ~exist('ANIMATE_INTERESTING','var'), ANIMATE_INTERESTING = false;  end
-if ~exist('USE_RST',            'var'), USE_RST            = false;  end
+if ~exist('USE_RST',            'var'), USE_RST            = true;   end
 if ~exist('RECORD_ANIMATIONS',  'var'), RECORD_ANIMATIONS  = false;  end
 
 rng(RANDOM_SEED);
@@ -358,7 +358,7 @@ if ANIMATE_INTERESTING && n_interesting > 0  % n_interesting already respects MI
             if USE_RST
                 ik_animation_rst;
             else
-                ik_animation;
+                run('Archive/ik_animation.m');
             end
             close all;
         end
