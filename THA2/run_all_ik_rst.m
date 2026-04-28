@@ -18,7 +18,7 @@ LABELS  = {'Newton-Raphson', 'Jacobian Transpose', ...
            'Redundancy Resolution', 'Damped Least-Squares'};
 IK_OPTS = {
     {};
-    {'alpha',0.1,'max_iter',500};
+    {'max_iter',500};
     {'k0',5};
     {'lambda_max',0.1,'sigma_thresh',0.05};
 };
@@ -91,7 +91,8 @@ fprintf('%s\n\n', repmat('=',1,90));
 fprintf('Producing videos...\n\n');
 
 for mi = 1:4
-    METHOD = METHODS{mi};
+    METHOD     = METHODS{mi};
+    VIDEO_FILE = fullfile('media', ['ik_anim_rst_' lower(METHOD) '.avi']);
     fprintf('--- Rendering %s ---\n', LABELS{mi});
     ik_animation_rst;
     close all;

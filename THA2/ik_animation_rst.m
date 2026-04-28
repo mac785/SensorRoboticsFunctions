@@ -43,7 +43,7 @@ rbt = load_kr120_rst();
 % Method-specific IK solver options
 switch METHOD
     case 'NR',  IK_OPTS = {};
-    case 'JT',  IK_OPTS = {'alpha',0.1,'max_iter',500}; STRIDE = 8;
+    case 'JT',  IK_OPTS = {'max_iter',500}; STRIDE = 8;
     case 'RR',  IK_OPTS = {'k0',5};
     case 'DLS', IK_OPTS = {'lambda_max',0.1,'sigma_thresh',0.05};
 end
@@ -268,11 +268,11 @@ for fi = 1:numel(frame_seq)
     drawnow;
 
     if RECORD
-        f = getframe(fig);
-        if size(f.cdata,2) ~= 1400 || size(f.cdata,1) ~= 750
-            f.cdata = imresize(f.cdata, [1080 1920]);
+        cdata = print(fig, '-RGBImage');
+        if size(cdata,1) ~= 1080 || size(cdata,2) ~= 1920
+            cdata = imresize(cdata, [1080 1920]);
         end
-        writeVideo(vw, f);
+        writeVideo(vw, cdata);
     end
 end
 

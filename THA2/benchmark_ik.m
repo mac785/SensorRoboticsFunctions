@@ -38,7 +38,7 @@ if ~exist('N_POINTS',           'var'), N_POINTS           = 20;     end
 if ~exist('GOAL_THETAS',        'var'), GOAL_THETAS        = [];     end
 if ~exist('RANDOM_START',       'var'), RANDOM_START       = false;  end
 if ~exist('RANDOM_SEED',        'var'), RANDOM_SEED        = 42;     end
-if ~exist('THRESH_ITER_RATIO',  'var'), THRESH_ITER_RATIO  = 50.0;   end  % JT is ~100x NR by design
+if ~exist('THRESH_ITER_RATIO',  'var'), THRESH_ITER_RATIO  = 50.0;   end  % for NR/RR/DLS comparison only
 if ~exist('THRESH_KAPPA_RATIO', 'var'), THRESH_KAPPA_RATIO = 5.0;    end
 if ~exist('THRESH_TIME_RATIO',  'var'), THRESH_TIME_RATIO  = 50.0;   end  % mirrors iter ratio
 if ~exist('MIN_INTERESTING_SCORE','var'), MIN_INTERESTING_SCORE = 2;  end  % require multiple flags
@@ -54,12 +54,12 @@ rng(RANDOM_SEED);
 
 robot = KR120_params();
 
-METHODS  = {'NR',  'JT',  'RR',  'DLS'};
+METHODS  = {'NR',  'JT',   'RR',  'DLS'};
 LABELS   = {'Newton-Raphson', 'Jacobian Transpose', ...
             'Redundancy Resolution', 'Damped Least-Squares'};
 IK_OPTS  = {
     {};
-    {'alpha', 0.1, 'max_iter', 3000};
+    {'max_iter', 3000};
     {'k0', 5};
     {'lambda_max', 0.1, 'sigma_thresh', 0.05};
 };
@@ -192,9 +192,10 @@ fprintf('%s\n\n', repmat('=',1,92));
 %% ========================================================================
 %%  SECTION 6 — Interesting run detection
 %% ========================================================================
-% JT is excluded from convergence and ratio checks because it is a
-% fundamentally slower algorithm — it failing or taking more iterations
-% than NR/RR/DLS is expected behaviour, not a meaningful comparison point.
+% JT is excluded from the ratio checks because its convergence basin is
+% narrower than NR/RR/DLS — failing on a point where the others succeed is
+% not anomalous. It gets its own +2 score if it converges on a point where
+% a fast method fails (that IS surprising).
 %
 % Scoring per point (pi_):
 %   +2  convergence mismatch among {NR, RR, DLS}
