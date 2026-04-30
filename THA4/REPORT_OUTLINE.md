@@ -1,288 +1,503 @@
-# THA4 Submission Outline
+# THA4 Report Outline
 **ME384R — Algorithms for Sensor-Based Robotics**
 **Prof. Farshid Alambeigi — Spring 2026**
 **Due: 2026-04-30, 3:30 PM**
 
-> Markers: `[FIG #]` = recommended figure · `[TBL #]` = recommended table · `[ANIM #]` = recommended animation/video
+> **Note for writer:** Figures marked `[FILE: ...]` already exist as PNG files in `THA4/figures/`.
+> Animations marked `[ANIM FILE: ...]` exist as AVI files in `THA4/figures/`.
+> Figures marked `[TO CREATE]` still need to be drawn or generated.
+> All numerical results are final — use the exact numbers given.
 
 ---
 
-## 0. Cover Page (provided by professor)
-
-- Names / EIDs / Emails (both partners if applicable)
-- Signed honour statement (signature required)
-- Score sheet appended as first sheet
-- Reference: HW4-main.pdf page 1
+## 0. Cover Page
+- Student name(s), EID(s), email(s)
+- Signed honour statement
+- Score sheet as first page
+- (Per professor's template — HW4-main.pdf page 1)
 
 ---
 
 ## 1. Homework Assignment (HA 1) — 50 pts
 
 ### Prompt
-> *In W14-L1, we derived admittance-based VFs for Tubular and cone types VFs. Extend these algorithms for Impedance-based VFs. Write appropriate equations and describe how you implement them in real applications.*
-
-### Suggested Section Layout
-
-**1.1 Background: Admittance vs. Impedance Control**
-- Brief recap of the admittance control law from W14-L1 (force-in → motion-out): the robot reads applied force `F`, computes a desired velocity `v_d` consistent with the VF, and tracks `v_d`.
-- Definition of impedance control (motion-in → force-out): the robot measures motion deviation from the VF, and outputs a wrench `F` that restores it.
-- Why the choice matters: admittance fits stiff robots; impedance fits backdrivable / direct-drive robots.
-- `[FIG 1]`: side-by-side block diagrams of admittance vs. impedance control loops.
-
-**1.2 Tubular VF — Admittance Form (recap from W14-L1)**
-- Parametric tube definition: axis line `L(s) = p₀ + s·t̂`, allowed-motion direction `t̂`, forbidden-motion span `n̂₁, n̂₂`, radius `r`.
-- Admittance law writes the constrained velocity as the projection of user input onto the allowed subspace, plus a soft return-to-axis term.
-
-**1.3 Tubular VF — Impedance Form (extension)**
-- Define a stiffness `K` and damping `B` in the *forbidden* directions (`n̂₁, n̂₂`).
-- Restoring wrench:
-  ```
-  F_imp = −K · (p_tip − p_axis)_⊥  −  B · (v_tip)_⊥
-  ```
-  where `(·)_⊥` denotes the component perpendicular to `t̂`.
-- Tangent direction `t̂` left compliant (zero stiffness) so the user can slide along the tube freely.
-- Show the equivalent for the *outer cylindrical wall* of the tube (one-sided spring activated only when `‖(p−p_axis)_⊥‖ > r`).
-
-**1.4 Conical VF — Impedance Form**
-- Parametric cone: apex `p_a`, axis `â`, half-angle `α`.
-- Define forbidden region as `angle(p − p_a, â) > α`.
-- Impedance law: project `(p − p_a)` onto the cone surface; apply spring/damper between current point and its projection.
-- One-sided activation: zero force inside the cone, restoring force as the tip exits.
-
-**1.5 Implementation in Real Applications**
-- Sensing: requires high-bandwidth force/torque sensor or torque-controlled joints; impedance form needs accurate `J(q)ᵀ · F` mapping.
-- Stability: discuss the contact-stability concern (Hogan's passivity argument); mention sample-rate / virtual-stiffness limits.
-- Comparison summary: when to prefer admittance (heavy industrial arm, no torque control) vs. impedance (collaborative/medical arm, contact-rich tasks).
-- Application examples: needle insertion (cone VF), tubular endoscopy navigation (tubular VF), surgical drilling (cone VF defining safe approach).
-
-`[TBL 1]`: side-by-side comparison: admittance vs. impedance forms for tubular and cone VFs (rows = quantity sensed, quantity output, stiffness location, suitability).
+> *In W14-L1, we derived admittance-based VFs for Tubular and Cone type VFs. Extend these algorithms for Impedance-based VFs. Write appropriate equations and describe how you implement them in real applications.*
 
 ---
 
-## 2. Programming Assignment (PA) — 100 pts + 20 bonus
+### 1.1 Background: Admittance vs. Impedance Control
+
+Briefly recap the two paradigms:
+
+**Admittance control** (from W14-L1): the controller reads an applied force/torque `F`, and outputs a desired velocity `v_d` that the robot then tracks. The robot is position-controlled at the servo level; the VF logic lives in the admittance mapping `F → v_d`.
+
+**Impedance control**: the controller reads motion (position/velocity deviation from a reference) and outputs a restoring wrench `F`. The robot is torque-controlled at the servo level; the VF logic lives in a virtual spring-damper.
+
+Key practical distinction:
+- Admittance suits stiff industrial arms (no back-drivability needed).
+- Impedance suits back-drivable / torque-controlled arms (collaborative robots, surgical systems).
+
+`[FILE: fig_diagram1_admittance_vs_impedance.png]`: Side-by-side block diagrams generated by `make_diagrams.m` — admittance loop (blue) and impedance loop (red), saved to `THA4/figures/`.
+
+---
+
+### 1.2 Tubular VF — Admittance Form (recap)
+
+Define the tube:
+- Axis: `L(s) = p₀ + s·t̂` where `t̂` is the unit tangent
+- Radius: `r`
+- Forbidden directions: the two directions perpendicular to `t̂` (the radial plane)
+
+Admittance law: project user-intent velocity onto the tangent direction and add a soft return-to-axis term in the radial plane:
+```
+v_d = (v_user · t̂) t̂  +  k_return · (p_axis − p_tip)_⊥
+```
+where `(·)_⊥` denotes the component in the radial plane.
+
+---
+
+### 1.3 Tubular VF — Impedance Form (new derivation)
+
+Replace the admittance mapping with a virtual spring-damper acting in the forbidden (radial) directions.
+
+Define radial displacement and velocity:
+```
+δ_⊥ = (p_tip − p_axis)_⊥     (vector in radial plane)
+v_⊥ = (ṗ_tip)_⊥
+```
+
+Restoring wrench (force applied to robot):
+```
+F_imp = −K_⊥ · δ_⊥  −  B_⊥ · v_⊥
+```
+
+where `K_⊥`, `B_⊥` are radial stiffness and damping gains.
+
+Tangential direction left compliant (zero stiffness) so the operator can slide freely along the tube.
+
+**One-sided activation** (outer wall): the spring only activates when `‖δ_⊥‖ > r`. Inside the tube, `F_imp = 0`; outside, the above law applies. This prevents the VF from fighting the user when they are in the safe region.
+
+---
+
+### 1.4 Conical VF — Impedance Form
+
+Define the cone:
+- Apex: `p_a`
+- Axis: `â`
+- Half-angle: `α`
+
+A point `p_tip` is inside the cone if `angle(p_tip − p_a, â) ≤ α`.
+
+For the impedance form, define the forbidden region as the exterior of the cone. When outside:
+
+1. Project `p_tip` onto the nearest point on the cone surface: `p_surf` (closest point on cone boundary to `p_tip`).
+2. Apply:
+```
+F_imp = −K · (p_tip − p_surf)  −  B · (ṗ_tip · n̂_surf) n̂_surf
+```
+where `n̂_surf` is the outward cone surface normal at `p_surf`.
+
+Inside the cone, `F_imp = 0`.
+
+---
+
+### 1.5 Implementation in Real Applications
+
+**Hardware requirements:**
+- Impedance form requires accurate joint torque sensing or a wrist force/torque sensor plus the transpose Jacobian: `τ = J(q)ᵀ · F_imp`.
+- Admittance form only needs position control, making it more broadly applicable.
+
+**Stability considerations:**
+- Hogan's passivity argument: virtual stiffness `K` must not exceed a stability limit set by the robot's inertia and the control sample rate. High `K` with slow loops causes oscillation.
+- Practical guideline: `K / (m_effective · f_s²) ≪ 1` where `f_s` is the servo frequency.
+
+**Application examples:**
+- Needle insertion (conical VF): cone defines safe angular approach corridor; impedance law physically resists the needle shaft tilting outside the allowed cone.
+- Tubular endoscopy (tubular VF): channel walls push back when the endoscope tip strays radially.
+- Surgical drilling (conical VF): the drill bit must stay within a specified approach angle; the VF resists off-axis force.
+
+`[TBL 1 — TO CREATE]`: Comparison table with columns: *Quantity Sensed*, *Quantity Output*, *Stiffness Location*, *Hardware Required*, *Best Suited For*. Two rows: Admittance, Impedance.
+
+---
+
+## 2. Programming Assignment (PA) — 100 pts + 20 bonus pts
 
 ### 2.1 Robot and Tool Setup
 
-- Robot: KUKA KR120 R2500 Pro (Quantec Nano), 6-DOF spherical wrist
-- Tool: cylindrical, 100 mm length × 5 mm diameter, attached along the EE z-axis
-- Tool tip position in world frame: `p_tip = p_ee + R_ee · [0;0;0.1]`
+**Robot:** KUKA KR120 R2500 Pro (Quantec Nano)
+- 6-DOF serial manipulator with spherical wrist
+- Parameters from `KR120_params.m` (PoE screw axes, home transform M, joint limits)
 
-`[FIG 2]`: rendering of the KR120 with the cylindrical tool — annotated dimensions (link lengths a₁, a₂, a₃, d₁, d₆, tool length 100 mm, tool diameter 5 mm). Could be a screenshot of the FK_space visualization with tool drawn on top.
+**Tool:** Cylindrical tool, 100 mm length × 5 mm diameter, rigidly fixed to EE frame along its z-axis.
 
-`[TBL 2]`: KR120 link parameters and joint limits (rows = J1..J6, columns = axis, limits in degrees).
+Tool tip position:
+```
+p_tip = p_ee + R_ee · [0; 0; 0.1]
+```
 
-### 2.2 Mathematical Background
+Joint limits (from `KR120_params.m`):
 
-**2.2.1 Forward Kinematics (PoE form)**
-- Brief recap from THA2: `T_ee(q) = exp([S₁]θ₁) · ... · exp([S₆]θ₆) · M`
-- All screw axes `S_i` defined in the space frame at the home configuration
+| Joint | Lower (deg) | Upper (deg) |
+|-------|------------|------------|
+| J1 | −185 | +185 |
+| J2 | −35 | +35 |
+| J3 | −120 | +158 |
+| J4 | −350 | +350 |
+| J5 | −130 | +130 |
+| J6 | −350 | +350 |
 
-**2.2.2 Tool-Tip Linear Jacobian**
-- Goal: relate joint velocity `dq` to tool tip Cartesian velocity `v_tip`
-- Decompose space Jacobian: `J_s = [J_omega; J_v]`
-- Velocity of any body point at world position `p`:
-  ```
-  v_p = v_s + ω_s × p   →   J_lin(p) = J_v − skew(p) · J_omega
-  ```
-- **Important pitfall to discuss:** `J_v` is NOT the velocity of the EE origin — it's the velocity of the body point instantaneously at the world origin. Using the offset `r = R_ee · [0;0;0.1]` instead of the absolute `p_tip` gives a spurious error of order `‖p_ee‖`. We caught this with a finite-difference Jacobian check (see [`THA4_notes.md`](THA4_notes.md)).
+`[FIG 2 — CROP FROM PDF]`: Crop the right panel of Fig. 1 from `HW4- main.pdf` (page 3) — shows the Franka/Kuka robot with the 100 mm / 5 mm cylindrical tool and dimension labels already annotated by the professor. No need to generate separately.
 
-`[FIG 3]`: schematic showing the spatial-velocity definition — body point at world origin vs. body point at the EE — with the cross-product `ω × p_tip` term illustrated.
-
-**2.2.3 Constrained Optimisation Formulation (W15-L1)**
-- The general velocity-level QP control loop:
-  ```
-  min_dq    ½ dq' H dq + f' dq
-  s.t.      A_ineq · dq ≤ b_ineq
-            lb ≤ dq ≤ ub
-  ```
-- Update rule: `q ← q + dq`, repeat until convergence
-
-`[FIG 4]`: block diagram of the QP control loop (current state → QP setup → quadprog → joint update → FK).
-
-### 2.3 Part (a) — Joint Limits + 3 mm Sphere
-
-**2.3.1 Objective derivation**
-- Desired Cartesian step: `v_d = α · (p_goal − p_tip)`, saturated to a max step length
-- Quadratic cost: `½‖J_tip · dq − v_d‖² + ½λ‖dq‖²` → expand to get H, f
-  - `H = J_tip' J_tip + λ I`
-  - `f = −J_tip' v_d`
-
-**2.3.2 Joint limit constraints**
-- Simple bounds on `dq`: `lb = max(q_min − q, −dq_max)`, `ub = min(q_max − q, dq_max)`
-
-**2.3.3 The 3 mm sphere constraint**
-- Unilateral half-space: activates when `‖p_tip − p_goal‖ ≤ 3 mm`
-- Outward radial unit vector: `n̂_out = (p_tip − p_goal) / ‖p_tip − p_goal‖`
-- Constraint: `n̂_out' · J_tip · dq ≤ 0` — once inside the sphere, no outward radial velocity allowed
-- Discuss: why unilateral and why outward — it is a *retention* constraint, not a *forbidden region*
-
-`[FIG 5]`: 2D cartoon of the sphere constraint — tip approaching p_goal, the 3 mm sphere drawn around p_goal, with the outward normal `n̂_out` and the half-plane of allowed dq directions shaded.
-
-**2.3.4 Test functions**
-- `tool_tip_fk.m` — verify against finite-difference Jacobian
-- `QP_step_VF.m` (mode a)
-- `simulate_VF.m` — runs to convergence
-
-**2.3.5 Results — Configuration 1**
-- Start: `q₀ = [0, −0.4, 0.5, 0, 0.3, 0]`, tip at `[2.690, 0, 0.860]`
-- Goal: `[1.8, 0.4, 1.0]`, start distance 986 mm
-- Converged in **51 steps**, final dist **0.0001 mm**, no joint limit violations
-- 3 mm constraint activated at step ~50, held tip inside sphere thereafter
-
-`[FIG 6]`: 3D trajectory for part (a) Config 1 — already produced as Fig 1 in `test_THA4.m`.
-`[FIG 7]`: distance-to-goal vs. step (log scale) for part (a) — already in Fig 2 of `test_THA4.m`.
-
-**2.3.6 Results — Configuration 2 (different goal)**
-- Goal: `[2.1, −0.3, 1.2]`, start distance 745 mm
-- Converged in 39 steps, final dist 0.001 mm
-
-`[TBL 3]`: results summary for parts (a) and (b) across both configurations (already drafted in `THA4_notes.md`).
-
-### 2.4 Part (b) — Tool Shaft Direction Stabilisation
-
-**2.4.1 Derivation**
-- Tool axis in world frame: `d̂ = R_ee · [0;0;1]`
-- Angular velocity component perpendicular to `d̂` is the part that *changes* the shaft direction
-- Define `J_perp = (I − d̂ · d̂') · J_omega`
-- Add cost term: `½μ‖J_perp · dq‖²` → adds `μ · J_perp' · J_perp` to H
-
-**2.4.2 Connection to redundancy resolution (THA2)**
-- For 6-DOF robot the null space is empty, so we cannot project a *secondary task* into the null space (as in THA2 `redundancy_resolution.m`). Instead we use a **soft secondary objective** weighted by μ — same principle, different mechanism.
-
-**2.4.3 Results**
-- Config 1: shaft swing reduced **45.5° → 5.7° (87.5% reduction)**, identical 51-step convergence
-- Config 2: shaft swing reduced **25.6° → 1.7° (93% reduction)**
-
-`[FIG 8]`: tool shaft angle vs. world Z over the trajectory — comparing (a) vs. (b), both configurations. Already produced as Fig 4 in `test_THA4.m`.
-
-`[ANIM 1]`: animated robot pose during approach for Config 1, side-by-side (a) vs (b). Visually shows the tool wagging in (a) and staying steady in (b). **High value for the presentation bonus.**
-
-### 2.5 Part (c) — Virtual Wall (+20 bonus)
-
-**2.5.1 Planar wall definition**
-- Wall: point `p_wall`, outward normal `n̂_wall` (points toward the safe side / robot)
-- Half-space membership: `n̂_wall' (p − p_wall) ≥ 0` ⇒ tip is on the safe side
-- Linear constraint: when `n̂_wall' (p_tip − p_wall) ≤ margin`, add `−n̂_wall' · J_tip · dq ≤ 0` to the QP
-
-**2.5.2 Two scenarios chosen**
-- **Wall 1** (blocking wall): goal `[1.8, 0.4, 1.0]`, wall at Y = 0.20 with `n̂ = [0,−1,0]`. Goal is on the unsafe side; robot converges to closest-feasible point near Y = 0.18. Demonstrates how the VF redirects the trajectory and gracefully terminates when the goal is unreachable.
-- **Wall 2** (approach-limiting wall): goal `[1.8, 0.25, 1.0]`, wall at Y = 0.35. Goal is reachable; the wall constrains overshoot during approach. Demonstrates the wall acting as a soft-stop.
-
-`[FIG 9]`: 3D trajectory for Wall 1 (Config 1 a/b/c-a/c-b overlaid with wall plane and 3 mm sphere). Already produced as Fig 1 in `test_THA4.m`.
-
-`[FIG 10]`: Y-position vs. step for Wall 1 — clearly shows the deflection at Y = 0.18. Already produced as Fig 5.
-
-`[FIG 11]`: 3D trajectory + Y-trajectory for Wall 2 (Fig 6 in `test_THA4.m`).
-
-`[ANIM 2]`: animation of the robot approaching p_goal through Wall 1 — shows the tip getting deflected at the wall and converging along the wall surface. **Excellent for presentation.**
-
-### 2.6 Part (d) — Comparison and Discussion
-
-`[TBL 4]`: master comparison table: rows = run (a Cfg1, b Cfg1, a Cfg2, b Cfg2, c-a Wall1, c-b Wall1, c-a Wall2, c-b Wall2), columns = steps, final dist, shaft swing (deg), max per-step shaft change, max joint deviation from limit, # constraints active at convergence.
-
-**2.6.1 Convergence comparison**
-- Free-approach (a/b) converges in 39–51 steps regardless of configuration
-- Wall-blocked (Wall 1) terminates around step 149 due to no-progress detection — the robot has reached the constrained optimum and is making sub-mm oscillations against the wall margin
-- Joint limits never violated (exit flag from quadprog = 1 in all 800+ QP calls)
-
-`[FIG 12]`: joint angles vs. step for all 6 joints, Config 1, all 4 modes (a/b/c-a/c-b) — already produced as Fig 3 in `test_THA4.m`.
-
-**2.6.2 Tool shaft preservation**
-- Quantitative effect of μ: small μ (0.01) gives ~90% reduction in swing with negligible cost in convergence speed
-- For Config 2 the effect is even more pronounced because the natural path requires more tool reorientation
-
-**2.6.3 Wall behaviour**
-- Hard-blocking wall converges to the projection of p_goal onto the safe half-space minus the activation margin
-- Soft-stop wall (Wall 2) achieves goal to within 0.05 mm while preventing transient overshoot
-
-**2.6.4 Sensitivity / robustness comments**
-- Tikhonov regulariser λ = 1e−4 prevents singularities (no SVD needed inside the QP)
-- Step saturation `step = 0.02 m` and `dq_max = 0.05 rad` keep the linearisation valid
-- Wall margin choice: too small ⇒ chattering at the boundary; too large ⇒ premature stopping. We use 2 cm as a stable middle ground.
-
-`[FIG 13]` (optional): velocity / step-size profile `‖dq‖` vs. step for each run — demonstrates smooth convergence in (a/b) and the sudden drop when the wall activates in (c).
-
-### 2.7 Implementation Notes
-
-**2.7.1 File organisation**
-- `tool_tip_fk.m` — tool tip FK + linear Jacobian
-- `QP_step_VF.m` — single QP step (parts a/b/c via opts struct)
-- `simulate_VF.m` — control loop with three convergence checks
-- `test_THA4.m` — reproduces all results and figures
-
-**2.7.2 Use of the Optimization Toolbox**
-- `quadprog` is the only external solver call; the *formulation* of H, f, A, b, lb, ub is entirely ours
-- Justification: this is a numerical solver analogous to `\` for linear systems; rewriting it would be an entire optimisation course in itself
-
-**2.7.3 Reproducibility**
-- All results come from running `test_THA4.m` from the project root with the THA4 folder added to the path
+`[TBL 2]`: The joint limits table above (already written above — reproduce in report).
 
 ---
 
-## 3. Presentation Materials (for +20 bonus, optional)
+### 2.2 Mathematical Background
 
-If presenting on April 30:
+#### 2.2.1 Forward Kinematics (Product of Exponentials)
 
-- 8–10 slides
-- Slide 1: title / team / problem statement
-- Slide 2: setup figure (`[FIG 2]`)
-- Slide 3: QP formulation (one-slide derivation)
-- Slide 4: part (a) result + 3 mm sphere figure
-- Slide 5: part (b) result with shaft swing comparison + animation
-- Slide 6: part (c) result with wall animation
-- Slide 7: comparison table
-- Slide 8: lessons learned (Jacobian pitfall + virtual fixture geometry choices)
-- Slide 9: extension ideas / questions
+From THA2, the end-effector transform using space-form PoE:
+```
+T_ee(q) = exp([S₁]θ₁) · exp([S₂]θ₂) · ··· · exp([S₆]θ₆) · M
+```
+where each `Sᵢ = [ωᵢ; vᵢ]` is the screw axis of joint i expressed in the space (world) frame at the robot's home configuration, and `M` is the home configuration transform.
+
+Implemented in `FK_space.m` (shared from THA2 helpers).
+
+#### 2.2.2 Tool-Tip Linear Jacobian
+
+The space Jacobian `Js = [Jω; Jv]` (6×6) relates joint velocity `dq` to the spatial twist at the space-frame origin. Crucially:
+
+> **`Jv` does NOT give the linear velocity of the EE origin.** It gives the linear velocity of the body point instantaneously coincident with the *world origin*. This is the standard space-form convention (Lynch & Park, Modern Robotics §5.1).
+
+The linear velocity of any body point at absolute world-frame position `p` is:
+```
+v_p = Jv · dq  +  ω × p   =   (Jv − skew(p) · Jω) · dq
+```
+
+Therefore the **3×6 tool-tip Jacobian** is:
+```
+J_tip = Jv − skew(p_tip) · Jω
+```
+where `p_tip` is the absolute world-frame position of the tool tip (NOT the offset `r = R_ee·[0;0;0.1]`).
+
+**Pitfall caught during development:** Using `skew(r)` instead of `skew(p_tip)` gave Jacobian errors of ~2.7 m/rad (same order as the arm reach), because the error term is `skew(p_ee)·Jω` — the cross product of the absolute EE position with the angular velocity. After the fix, finite-difference Jacobian verification showed errors of ~3×10⁻⁹ m/rad across all tested configurations.
+
+Implemented in `tool_tip_fk.m`.
+
+`[FIG 3 — OPTIONAL / SKIP]`: Jacobian pitfall schematic. The text explanation above is self-contained — omit this figure unless time permits. If included, hand-draw a simple 2D arm showing world origin, p_ee, p_tip, and the ω × p_tip correction arrow.
+
+#### 2.2.3 QP-Based Velocity Control Formulation
+
+At each timestep, solve for the optimal joint displacement `dq`:
+```
+minimise    ½ dq' H dq + f' dq
+subject to  A_ineq · dq ≤ b_ineq        (sphere and/or wall constraints)
+            lb ≤ dq ≤ ub                (joint limit + max-step bounds)
+```
+
+Then apply: `q ← q + dq`. Repeat until convergence.
+
+Solver: MATLAB `quadprog` (Optimization Toolbox). The problem formulation (H, f, A, b, lb, ub) is entirely derived from first principles; `quadprog` is used purely as a numerical solver, analogous to `\` for linear systems.
+
+`[FIG 4 — OPTIONAL / SKIP]`: QP control loop block diagram. The formulation above describes the loop fully in text — omit unless time permits. If included, hand-draw: `q_k → [FK+Jac] → [Build QP] → [quadprog] → dq → q_{k+1}` with feedback arrow.
+
+---
+
+### 2.3 Part (a) — Joint Limits + 3 mm Sphere Constraint
+
+#### Objective
+
+Desired Cartesian step toward goal, saturated to max step size `step = 0.02 m`:
+```
+v_d = min(‖e‖, step) · e/‖e‖    where e = p_goal − p_tip
+```
+
+QP matrices:
+```
+H = J_tip' · J_tip + λ·I          (λ = 1e-4 Tikhonov regularisation)
+f = −J_tip' · v_d
+```
+
+#### Joint Limit Bounds
+
+Simple bounds clipped to maximum step:
+```
+lb = max(q_min − q,  −dq_max · 1)      dq_max = 0.05 rad
+ub = min(q_max − q,  +dq_max · 1)
+```
+
+#### 3 mm Sphere Constraint
+
+Once the tip enters the 3 mm sphere around `p_goal` (`‖p_tip − p_goal‖ ≤ 0.003 m`), a unilateral constraint prevents the tip from escaping back out:
+
+```
+n̂_out = (p_tip − p_goal) / ‖p_tip − p_goal‖    (outward radial unit normal)
+n̂_out' · J_tip · dq ≤ 0
+```
+
+This is a *retention* constraint: the tip can continue approaching `p_goal` once inside the sphere, but cannot move outward. It is one-sided (only active inside the sphere) because outside the sphere there is no constraint — the tip is free to approach freely.
+
+`[FIG 5 — CROP FROM PDF]`: Crop the right panel of Fig. 1 from `HW4- main.pdf` (page 3) — the professor's figure already shows the 3 mm circle around p_goal with the green sphere labeled. Use that directly.
+
+---
+
+### 2.4 Part (b) — Tool Shaft Direction Stabilisation
+
+#### Derivation
+
+Tool axis in world frame: `d̂ = R_ee · [0;0;1]`
+
+The component of angular velocity perpendicular to the tool axis is the part that *rotates* the shaft direction:
+```
+ω_⊥ = (I − d̂·d̂') · Jω · dq
+J_perp = (I − d̂·d̂') · Jω              (3×6)
+```
+
+Add secondary cost term to H weighted by `μ = 0.01`:
+```
+H = J_tip'·J_tip + λ·I + μ·J_perp'·J_perp
+```
+
+f and all constraints remain identical to part (a). Only H changes.
+
+#### Connection to THA2 Redundancy Resolution
+
+In THA2, secondary tasks were projected into the null space of the primary Jacobian. For a 6-DOF robot with a 3-DOF task, that null space is 3-dimensional. Here the robot is **square** (6 joints, 6-DOF task after adding the sphere constraint), so there is no null space available. The shaft stabilisation is therefore implemented as a **soft secondary objective** (a cost weight μ) rather than a hard null-space projection. The principle is identical — penalise unwanted joint motion directions — but the mechanism is different.
+
+---
+
+### 2.5 Scenarios and Results
+
+Six scenarios were run, each in mode (a) and mode (b), giving 12 total simulations. All results produced by `test_THA4.m`.
+
+#### Scenario Descriptions
+
+| Label | q₀ (rad) | p_goal (m) | Purpose |
+|-------|----------|-----------|---------|
+| Cfg1 | [0,−0.4,0.5,0,0.3,0] | [1.8, 0.4, 1.0] | Baseline, mid-workspace |
+| Cfg2 | [0,−0.4,0.5,0,0.3,0] | [2.1,−0.3, 1.2] | Different goal direction (−Y, higher Z) |
+| Cfg3 | [0, 0, 0.3, 0, 0, 0] | [1.5, 0,−1.5] | Goal below robot base — forces J2 to its upper limit |
+| Cfg4 | [0,−0.4,0.5,0,0.3,0] | [−0.5, 1.5, 1.2] | Goal behind robot — large J1 swing + wrist reorientation |
+| Cfg5 | [0,−0.4,0.5,0,0.3,0] | [1.8, 0.4, 1.0] | Wall at Y=0.20 (n̂=[0,−1,0]) — wall blocks goal |
+| Cfg6 | [0,−0.4,0.5,0,0.3,0] | [1.8, 0.25, 1.0] | Wall at Y=0.35 (n̂=[0,−1,0]) — goal accessible, wall limits overshoot |
+
+#### Full Results Table
+
+| Scenario | Mode | Steps | Final dist (mm) | Shaft swing (°) | Joint limit hit |
+|----------|------|-------|----------------|----------------|----------------|
+| Cfg1 | (a) | 51 | 0.0001 | 45.5 | — |
+| Cfg1 | (b) | 51 | 0.0017 | **5.7** (−87%) | — |
+| Cfg2 | (a) | 39 | 0.0012 | 25.6 | — |
+| Cfg2 | (b) | 39 | 0.0012 | **1.7** (−93%) | — |
+| Cfg3 | (a) | 191 | 213.9 (blocked) | 65.8 | J2+ |
+| Cfg3 | (b) | 181 | 213.8 (blocked) | 65.0 (−1%) | J2+ |
+| Cfg4 | (a) | 179 | 0.0003 | 60.3 | — |
+| Cfg4 | (b) | 179 | 0.0098 | **5.4** (−91%) | — |
+| Cfg5 | (a) | 149 | 214.3 (wall-blocked) | 46.5 | — |
+| Cfg5 | (b) | 149 | 213.6 (wall-blocked) | **4.5** (−90%) | — |
+| Cfg6 | (a) | 48 | 0.023 | 46.6 | — |
+| Cfg6 | (b) | 48 | 0.045 | **4.1** (−91%) | — |
+
+`[TBL 3]`: Reproduce the full results table above.
+
+---
+
+### 2.6 Part (a/b) Discussion — Free-Approach Configurations
+
+Use Cfg1, Cfg2, Cfg4 for the main discussion (Cfg3 is treated separately as the joint-limit case).
+
+**Convergence:** All three free-approach configs converge cleanly. Cfg1 and Cfg2 converge in 39–51 steps. Cfg4 takes 179 steps because the goal is behind the robot and the path is longer, not because of any instability.
+
+**Shaft stabilisation effectiveness:** Mode (b) reduces shaft swing by 87–93% in all free-approach cases. There is zero cost to convergence speed — identical step counts in every case. The wrist joints (J4, J5, J6) simply absorb the compensating motion that mode (a) would otherwise express as shaft rotation.
+
+**Cfg4 as the showcase:** The goal at [−0.5, 1.5, 1.2] is behind and across the robot, requiring a ~180° J1 swing and substantial wrist reorientation. Mode (a) swings the shaft through 60.3°. Mode (b) keeps it within 5.4°.
+
+`[FILE: fig1_3d_trajectories.png]` — 3D tool tip trajectories, all 6 scenarios, (a) blue vs (b) red.
+`[FILE: fig2_distance_vs_step.png]` — Distance to goal vs step (log scale), all 6 scenarios.
+`[FILE: fig3_shaft_angle.png]` — Tool shaft angle from world Z, all 6 scenarios.
+
+`[ANIM FILE: anim1_rst_shaft_cfg4.avi]` — Full KR120 mesh animation, Cfg4, side-by-side mode (a) left vs mode (b) right. Blue trajectory + thick blue tool shaft on left; red trajectory + thick red shaft on right. Shows shaft wagging in (a) vs staying stable in (b). Camera: +X/+Y/+Z isometric view.
+
+---
+
+### 2.7 Part (a) — Joint Limit Validation (Cfg3)
+
+**Setup:** Starting near the home configuration, the goal [1.5, 0, −1.5] is below the robot's base — only reachable by extending J2 past its upper limit of +35° (+0.611 rad). The QP correctly clamps J2 at its limit and redistributes motion to other joints.
+
+**Results:**
+- Both modes terminate ~214 mm from goal with J2 saturated at +35°
+- Mode (b) barely reduces shaft swing here (65.8° → 65.0°, only 1%). This is fundamental: when joint limits dominate, the robot has no degrees of freedom available to optimise shaft direction. The μ term only helps when there is slack in the primary constraints.
+- Zero joint limit *violations* — J2 saturates exactly at +35° and stays there.
+
+`[FILE: fig4_joint_angles_cfg3.png]` — J1–J6 joint angles vs step for Cfg3, both modes. J2 clearly saturates at +35° (dotted limit lines shown).
+
+---
+
+### 2.8 Part (c) — Virtual Wall (+20 bonus pts)
+
+#### Wall Constraint Derivation
+
+Define the wall by a point `p_wall` and outward normal `n̂_wall` (pointing toward the safe/robot side).
+
+Signed distance from wall: `d_pen = n̂_wall' · (p_tip − p_wall)`. Positive = safe side.
+
+When `d_pen ≤ margin` (default 2 cm), activate:
+```
+−n̂_wall' · J_tip · dq ≤ 0    ⟺    n̂_wall' · J_tip · dq ≥ 0
+```
+This requires the tip's velocity component toward the wall to be non-negative (tip can move away from or along the wall, but not further into it).
+
+This constraint is appended to `A_ineq` alongside the sphere constraint. The QP naturally finds the constrained-optimal trajectory satisfying all active constraints simultaneously.
+
+#### Cfg5 — Wall Blocks Goal
+
+- Wall at Y = 0.20, `n̂ = [0,−1,0]` (safe side is Y ≤ 0.20)
+- Goal at [1.8, 0.4, 1.0] is on the unsafe side (Y = 0.40)
+- Activation margin: 2 cm → constraint activates at Y = 0.18
+
+**Outcome:** Robot converges to the closest feasible point on the wall margin boundary (~214 mm from goal). This is correct constrained-optimal behaviour — the QP finds the nearest point to `p_goal` within the feasible half-space. The robot does not stall or diverge; it simply converges to the wall surface.
+
+Mode (b) still reduces shaft swing 90% (46.5° → 4.5°) even in this wall-blocked scenario.
+
+#### Cfg6 — Wall as Approach Limiter
+
+- Wall at Y = 0.35, `n̂ = [0,−1,0]` (safe side is Y ≤ 0.35)
+- Goal at [1.8, 0.25, 1.0] is on the safe side — reachable
+- The wall prevents the tip from overshooting past Y = 0.35 during the approach
+
+**Outcome:** Robot reaches goal to within 0.023 mm (mode a) / 0.045 mm (mode b). The trajectory is noticeably straighter than without the wall — the wall acts as a guide rail preventing transient overshoot.
+
+`[FILE: fig5_wall_deflection.png]` — Y-position vs step for Cfg5 (left: wall blocks goal) and Cfg6 (right: wall as limiter). Goal Y and wall Y marked with dotted lines.
+
+`[ANIM FILE: anim2_rst_wall_cfg5.avi]` — Full KR120 mesh animation, Cfg5, mode (a) robot shown with both trajectories overlaid. Orange wall plane visible. Blue solid = mode (a), red dashed = mode (b). Camera: +X/−Y/+Z view showing wall face.
+
+---
+
+### 2.9 Part (d) — Comparison and Discussion
+
+`[FILE: fig6_convergence_speed.png]` — Bar chart: steps to reach <1 mm from goal, mode (a) vs (b), all scenarios. Cfg3 and Cfg5 show at 600 (max steps, did not converge — blocked by limit/wall by design).
+
+#### Key Observations
+
+1. **Mode (b) shaft stabilisation is consistently 87–93% effective** for all free-approach configurations. Convergence speed is identical in all cases.
+
+2. **Cfg3 reveals the limits of part (b):** when a joint limit is the binding constraint, there are no free degrees of freedom left for secondary objectives. The 1% shaft reduction in Cfg3 (vs 87–93% elsewhere) confirms that the μ term only helps when the primary task leaves slack. This is not a failure of mode (b) — it is a fundamental property of constrained optimisation.
+
+3. **Cfg4 is the strongest demonstration of part (b):** 60.3° → 5.4° shaft swing while maintaining identical 179-step convergence. The wrist joints absorb the compensating motion invisibly from the tip's perspective.
+
+4. **The virtual wall constraint gracefully handles the unreachable goal case** (Cfg5): rather than oscillating or diverging, the QP finds the closest feasible point and converges there. This is a direct consequence of the convexity of the QP — the constrained optimum is unique and well-defined.
+
+5. **Zero joint limit violations across all 12 runs.** The QP's simple-bound formulation (`lb ≤ dq ≤ ub`) is sufficient; no additional joint-limit inequality rows are needed.
+
+6. **Tikhonov regularisation (λ = 1e−4)** prevents numerical issues near singular configurations without needing SVD or damped least-squares external to the QP. The step saturation (`step = 0.02 m`, `dq_max = 0.05 rad`) keeps the first-order linearisation valid throughout.
+
+---
+
+### 2.10 Implementation Notes
+
+#### File Structure
+
+| File | Purpose |
+|------|---------|
+| `tool_tip_fk.m` | Tool tip position and 3×6 linear Jacobian |
+| `QP_step_VF.m` | Single QP step — handles parts (a), (b), (c) via opts struct |
+| `simulate_VF.m` | Control loop: runs N steps, returns full trajectory |
+| `test_THA4.m` | Runs all 12 scenarios, generates all 6 figures, saves PNGs and AVIs |
+| `make_animations_rst.m` | Full KR120 mesh animations (RST-based) for Cfg4 and Cfg5 |
+| `KR120_params.m` | Robot parameters (shared from THA2 helpers) |
+
+#### Convergence Criteria (simulate_VF.m)
+
+Three stopping conditions, whichever triggers first:
+1. `‖dq‖_∞ < 1e-6` — QP solution is essentially zero (numerically converged)
+2. `‖p_tip − p_goal‖ < 0.05 mm` — close enough to goal
+3. Tip has moved less than 0.1 mm in the last 30 steps (wall-blocked or limit-blocked)
+
+#### Use of quadprog
+
+`quadprog` is the only external solver call. The entire formulation of `H`, `f`, `A_ineq`, `b_ineq`, `lb`, `ub` is derived from first principles in `QP_step_VF.m`. Using `quadprog` is analogous to using MATLAB's `\` for linear systems — it is a numerical tool, not a shortcut around the mathematics.
+
+---
+
+## 3. Presentation Materials
+
+If presenting April 30:
+
+- **Slide 1:** Title, team, problem statement (real-time constrained QP robot control)
+- **Slide 2:** Robot setup — `[FIG 2]`, tool diagram, joint limits table
+- **Slide 3:** QP formulation — one slide with the min/subject-to form, H, f, constraints
+- **Slide 4:** Jacobian pitfall — `[FIG 3]`, the spatial velocity issue, finite-difference validation
+- **Slide 5:** Part (a) results — `[FILE: fig1_3d_trajectories.png]`, convergence curves
+- **Slide 6:** Part (b) shaft stabilisation — `[ANIM FILE: anim1_rst_shaft_cfg4.avi]`, before/after swing numbers
+- **Slide 7:** Part (c) virtual wall — `[ANIM FILE: anim2_rst_wall_cfg5.avi]`, wall constraint equation
+- **Slide 8:** Cfg3 joint limit result — `[FILE: fig4_joint_angles_cfg3.png]`, why mode (b) doesn't help
+- **Slide 9:** Comparison table — `[TBL 3]`, key takeaways
 
 ---
 
 ## 4. References
 
-- Lynch, K. M., & Park, F. C. *Modern Robotics: Mechanics, Planning, and Control.* Cambridge University Press, 2017. (PoE FK and Jacobian formulations)
-- Course lectures: W14-L1 (admittance-based VFs), W15-L1 (constrained-optimisation control)
-- KUKA Deutschland GmbH, *KR 120 R2500 Pro Technical Data*
-- MATLAB Optimization Toolbox documentation: `quadprog`
-- (HA1) Hogan, N. *Impedance Control: An Approach to Manipulation.* J. Dynamic Systems, Measurement, and Control, 1985.
-- (HA1) Abbott, J. J. & Okamura, A. M. *Virtual Fixture Architectures for Telemanipulation.* ICRA 2003 (or similar VF reference cited in lecture).
+- Lynch, K. M. & Park, F. C. *Modern Robotics: Mechanics, Planning, and Control.* Cambridge University Press, 2017. — PoE FK, space Jacobian (§5.1)
+- Course lectures: W14-L1 (admittance-based VFs for tubular/cone), W15-L1 (constrained optimisation control)
+- KUKA Deutschland GmbH. *KR 120 R2500 Pro Technical Data.*
+- MATLAB Documentation. *quadprog — Quadratic Programming Solver.* Optimization Toolbox.
+- Hogan, N. "Impedance Control: An Approach to Manipulation." *J. Dynamic Systems, Measurement, and Control*, 107(1):1–7, 1985.
+- Abbott, J. J. & Okamura, A. M. "Virtual Fixture Architectures for Telemanipulation." *ICRA 2003.* (or equivalent VF reference cited in W14-L1)
 
 ---
 
 ## 5. Submission Checklist
 
 - [ ] Cover/score sheet signed and on top
-- [ ] HA 1 derivation with figures
-- [ ] PA report (Sections 2.1 – 2.6)
-- [ ] All MATLAB source files (`THA4/*.m`) included in the submission archive
-- [ ] All required figures present
-- [ ] References section
+- [ ] HA 1 written (Sections 1.1–1.5, TBL 1)
+- [ ] PA report written (Sections 2.1–2.9)
+- [ ] All MATLAB source files (`THA4/*.m`) included in submission archive
+- [ ] Figures included: fig1–fig6 PNGs from `THA4/figures/`
+- [ ] Animations included: both RST AVIs from `THA4/figures/`
+- [ ] References section complete
 - [ ] Submitted to Canvas before 3:30 PM, 2026-04-30
-- [ ] (Optional) Notify professor by April 29 if presenting
+- [ ] (Optional) Notified professor by April 29 if presenting
 
 ---
 
-## Figures / Tables / Animations — Production Plan
+## 6. Assets — What Exists vs. What Still Needs Creating
 
-| ID | Type | Source | Effort |
-|----|------|--------|--------|
-| FIG 1 | Diagram | TikZ / hand-drawn / draw.io | low |
-| FIG 2 | Robot rendering | Modify `FK_space` visualization, draw tool cylinder | low |
-| FIG 3 | Schematic | hand-drawn / draw.io | low |
-| FIG 4 | Block diagram | draw.io | low |
-| FIG 5 | Cartoon | hand-drawn | very low |
-| FIG 6 | 3D plot | already in `test_THA4.m` Fig 1 | none |
-| FIG 7 | Distance plot | already in `test_THA4.m` Fig 2 | none |
-| FIG 8 | Shaft angle plot | already in `test_THA4.m` Fig 4 | none |
-| FIG 9 | 3D plot Wall 1 | already in `test_THA4.m` Fig 1 | none |
-| FIG 10 | Y-trajectory plot | already in `test_THA4.m` Fig 5 | none |
-| FIG 11 | 3D + Y plot Wall 2 | already in `test_THA4.m` Fig 6 | none |
-| FIG 12 | Joint angle plot | already in `test_THA4.m` Fig 3 | none |
-| FIG 13 | Velocity profile plot | new — small addition to test script | low |
-| ANIM 1 | (a) vs (b) shaft animation | new — needs robot-pose animator | medium |
-| ANIM 2 | Wall 1 deflection animation | new — same animator | medium |
-| TBL 1 | Adm vs Imp summary | hand-write | low |
-| TBL 2 | KR120 specs | extract from `KR120_params.m` | very low |
-| TBL 3 | (a/b) results | already drafted in notes | none |
-| TBL 4 | Master comparison | new — extend the existing summary | low |
+### Already Done — MATLAB-generated figures (THA4/figures/)
 
-**Recommendation:** the highest-leverage new artefacts are `[ANIM 1]` and `[ANIM 2]` — they're worth the most for a presentation and give a strong visual sense of the QP control's behaviour. We already have `robot_animation.m` and `ik_animation.m` in the repo from THA2 — those can probably be adapted.
+| File | Contents | Used in section |
+|------|----------|----------------|
+| `fig1_3d_trajectories.png` | 3D tool tip paths, all 6 scenarios, (a) vs (b) | 2.6, 2.8 |
+| `fig2_distance_vs_step.png` | Distance to goal log-scale, all 6 scenarios | 2.6 |
+| `fig3_shaft_angle.png` | Tool shaft angle from world Z, all 6 scenarios | 2.6 |
+| `fig4_joint_angles_cfg3.png` | J1–J6 vs step for Cfg3, (a) and (b) | 2.7 |
+| `fig5_wall_deflection.png` | Y-position vs step, Cfg5 and Cfg6 | 2.8 |
+| `fig6_convergence_speed.png` | Steps-to-1mm bar chart, all scenarios | 2.9 |
 
+### Already Done — Animations (THA4/figures/)
+
+| File | Contents | Used in section |
+|------|----------|----------------|
+| `anim1_rst_shaft_cfg4.avi` | KR120 mesh, Cfg4, side-by-side (a) vs (b), shaft shown | 2.6 |
+| `anim2_rst_wall_cfg5.avi` | KR120 mesh, Cfg5, both trajectories, orange wall | 2.8 |
+
+### Already Done — Conceptual diagrams (THA4/figures/)
+
+| File | Contents | Used in section |
+|------|----------|----------------|
+| `fig_diagram1_admittance_vs_impedance.png` | Admittance vs impedance block diagrams | 1.1 |
+
+### Crop from HW4- main.pdf (page 3, Fig. 1)
+
+| Figure | What to crop | Used in section |
+|--------|-------------|----------------|
+| FIG 2 | Right panel — robot with 100 mm / 5 mm tool, dimension labels | 2.1 |
+| FIG 5 | Right panel — 3 mm green sphere around p_goal | 2.3 |
+
+### Still Needs Creating
+
+| Item | Description | Section |
+|------|-------------|---------|
+| TBL 1 | Admittance vs impedance comparison table (write directly in Word) | 1.5 |
+| FIG 3 | Jacobian pitfall schematic — **optional**, skip if pressed for time | 2.2.2 |
+| FIG 4 | QP loop block diagram — **optional**, skip if pressed for time | 2.2.3 |
