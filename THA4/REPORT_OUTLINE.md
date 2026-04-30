@@ -207,7 +207,7 @@ Use Cfg1, Cfg2, Cfg4 for the main discussion (Cfg3 is treated separately as the 
 `[FILE: fig2_distance_vs_step.png]` — Distance to goal vs step (log scale), all 6 scenarios.
 `[FILE: fig3_shaft_angle.png]` — Tool shaft angle from world Z, all 6 scenarios.
 
-`[ANIM FILE: anim1_rst_shaft_cfg4.avi]` — Full KR120 mesh animation, Cfg4, side-by-side mode (a) left vs mode (b) right. Blue trajectory + thick blue tool shaft on left; red trajectory + thick red shaft on right. Shows shaft wagging in (a) vs staying stable in (b). Camera: +X/+Y/+Z isometric view.
+`[ANIM FILE: anim4_rst_shaft_cfg4.gif]` — Full KR120 mesh animation, Cfg4, side-by-side mode (a) left vs mode (b) right. Blue trajectory + thick blue tool shaft on left; red trajectory + thick red shaft on right. Shows shaft wagging in (a) vs staying stable in (b). Camera: +X/+Y/+Z isometric view.
 
 ---
 
@@ -260,7 +260,7 @@ Mode (b) still reduces shaft swing 90% (46.5° → 4.5°) even in this wall-bloc
 
 `[FILE: fig5_wall_deflection.png]` — Y-position vs step for Cfg5 (left: wall blocks goal) and Cfg6 (right: wall as limiter). Goal Y and wall Y marked with dotted lines.
 
-`[ANIM FILE: anim2_rst_wall_cfg5.avi]` — Full KR120 mesh animation, Cfg5, mode (a) robot shown with both trajectories overlaid. Orange wall plane visible. Blue solid = mode (a), red dashed = mode (b). Camera: +X/−Y/+Z view showing wall face.
+`[ANIM FILE: anim5_rst_wall_cfg5.gif]` — Full KR120 mesh animation, Cfg5, mode (a) robot shown with both trajectories overlaid. Orange wall plane visible. Blue solid = mode (a), red dashed = mode (b). Camera: +X/−Y/+Z view showing wall face.
 
 ---
 
@@ -295,7 +295,7 @@ Mode (b) still reduces shaft swing 90% (46.5° → 4.5°) even in this wall-bloc
 | `simulate_VF.m` | Control loop: runs N steps, returns full trajectory |
 | `test_functions_THA4.m` | Unit tests: T1–T6 for `tool_tip_fk` and `QP_step_VF` (6/6 pass) |
 | `test_THA4.m` | Integration test: runs all 12 scenarios, generates all 6 figures |
-| `make_animations_rst.m` | Full KR120 mesh animations (RST-based) for Cfg4 and Cfg5 |
+| `make_animations_rst.m` | Full KR120 mesh animations (RST-based) for all 6 configurations |
 | `KR120_params.m` | Robot parameters (shared from THA2 helpers) |
 
 #### Convergence Criteria (simulate_VF.m)
@@ -401,8 +401,8 @@ If presenting April 30:
 - **Slide 3:** QP formulation — one slide with the min/subject-to form, H, f, constraints
 - **Slide 4:** Jacobian pitfall — `[FIG 3]`, the spatial velocity issue, finite-difference validation
 - **Slide 5:** Part (a) results — `[FILE: fig1_3d_trajectories.png]`, convergence curves
-- **Slide 6:** Part (b) shaft stabilisation — `[ANIM FILE: anim1_rst_shaft_cfg4.avi]`, before/after swing numbers
-- **Slide 7:** Part (c) virtual wall — `[ANIM FILE: anim2_rst_wall_cfg5.avi]`, wall constraint equation
+- **Slide 6:** Part (b) shaft stabilisation — `[ANIM FILE: anim4_rst_shaft_cfg4.gif]`, before/after swing numbers
+- **Slide 7:** Part (c) virtual wall — `[ANIM FILE: anim5_rst_wall_cfg5.gif]`, wall constraint equation
 - **Slide 8:** Cfg3 joint limit result — `[FILE: fig4_joint_angles_cfg3.png]`, why mode (b) doesn't help
 - **Slide 9:** Comparison table — `[TBL 3]`, key takeaways
 
@@ -450,8 +450,12 @@ If presenting April 30:
 
 | File | Contents | Used in section |
 |------|----------|----------------|
-| `anim1_rst_shaft_cfg4.avi` | KR120 mesh, Cfg4, side-by-side (a) vs (b), shaft shown | 1.6 |
-| `anim2_rst_wall_cfg5.avi` | KR120 mesh, Cfg5, both trajectories, orange wall | 1.8 |
+| `anim1_rst_baseline_cfg1.gif` | KR120 mesh, Cfg1, both modes overlaid, standard view | 1.5 |
+| `anim2_rst_negy_cfg2.gif` | KR120 mesh, Cfg2, both modes overlaid, +Y camera | 1.5 |
+| `anim3_rst_jlimit_cfg3.gif` | KR120 mesh, Cfg3, both modes overlaid, low elevation | 1.7 |
+| `anim4_rst_shaft_cfg4.gif` | KR120 mesh, Cfg4, side-by-side (a) vs (b), shaft shown | 1.6 |
+| `anim5_rst_wall_cfg5.gif` | KR120 mesh, Cfg5, both trajectories, orange wall | 1.8 |
+| `anim6_rst_wall_cfg6.gif` | KR120 mesh, Cfg6, both trajectories, orange wall, +Y camera | 1.8 |
 
 ### Already Done — Conceptual diagrams (THA4/figures/)
 
