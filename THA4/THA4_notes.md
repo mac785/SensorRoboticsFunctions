@@ -243,22 +243,69 @@ representation. Body-frame Jacobians (`J_body`) don't have this issue because
 the linear part is already expressed relative to the EE frame — but spatial
 Jacobians require using absolute position.
 
-### 2026-04-28 — Results from full simulation
+### 2026-04-28 — Results from full simulation (initial 6 runs)
 
-All results with: KR120, 100 mm tool, λ=1e-4, step=20 mm/iter, dq_max=0.05 rad.
+Early results before scenario refactor — superseded by the 12-run table below.
 
-| Run | Steps | Final dist | Shaft swing |
-|-----|-------|-----------|-------------|
-| (a) Config 1 | 51 | 0.0001 mm | 45.5° |
-| (b) Config 1 | 51 | 0.0017 mm | **5.7°** (−87.5%) |
-| (a) Config 2 | 39 | 0.0012 mm | 25.6° |
-| (b) Config 2 | 39 | 0.0012 mm | **1.7°** (−93%) |
-| (c-a) Wall 1 | 149 | 214 mm (wall-blocked) | — |
-| (c-b) Wall 1 | 149 | 214 mm (wall-blocked) | — |
-| (c-a) Wall 2 | 48 | 0.023 mm | — |
-| (c-b) Wall 2 | 48 | 0.045 mm | — |
+### 2026-04-29 — Refactored to scenario list, added Cfg 3 and Cfg 4
 
-**Zero joint limit violations** in all 6 runs.
+`test_THA4.m` now uses a scenario struct array. Adding a new test case is a
+one-line addition. Six scenarios run × 2 modes = 12 simulations.
+
+All results: KR120, 100 mm tool, λ=1e-4, μ=0.01 (mode b), step=20 mm/iter,
+dq_max=0.05 rad, sphere radius=3 mm.
+
+| Scenario | Description | Mode | Steps | Final dist | Shaft swing | Joints at limit |
+|----------|-------------|------|-------|-----------|-------------|-----------------|
+| Cfg1 | Baseline, mid-workspace | (a) | 51  | 0.0001 mm | 45.5° | — |
+| Cfg1 |                         | (b) | 51  | 0.0017 mm | **5.7°** (−87%) | — |
+| Cfg2 | Different goal direction | (a) | 39  | 0.0012 mm | 25.6° | — |
+| Cfg2 |                          | (b) | 39  | 0.0012 mm | **1.7°** (−93%) | — |
+| Cfg3 | Joint-limit pressure (J2+) | (a) | 191 | 213.9 mm (limit-blocked) | 65.8° | **J2+** |
+| Cfg3 |                            | (b) | 181 | 213.8 mm (limit-blocked) | 65.0° (−1%) | **J2+** |
+| Cfg4 | Reorientation-heavy        | (a) | 179 | 0.0003 mm | 60.3° | — |
+| Cfg4 |                            | (b) | 179 | 0.0098 mm | **5.4°** (−91%) | — |
+| Cfg5 | Wall blocks goal           | (a) | 149 | 214.3 mm (wall-blocked) | 46.5° | — |
+| Cfg5 |                            | (b) | 149 | 213.6 mm (wall-blocked) | **4.5°** (−90%) | — |
+| Cfg6 | Wall as approach limiter   | (a) | 48  | 0.023 mm | 46.6° | — |
+| Cfg6 |                            | (b) | 48  | 0.045 mm | **4.1°** (−91%) | — |
+
+**Zero joint limit *violations*** anywhere — Cfg3 reaches its J2+ limit
+(intended) and the QP correctly clamps further increase.
+
+### Key observations from the 4 free-approach configs
+
+1. **Mode (b) shaft stabilisation is consistently 87–93% effective** when
+   joint limits do *not* dominate (Cfg1, Cfg2, Cfg4). Convergence speed is
+   identical to mode (a) in every case.
+
+2. **Cfg3 reveals a limit of part (b):** when the goal is unreachable due to
+   a joint limit, the robot converges to the constrained-optimal pose. At
+   that pose, the shaft direction is *forced* by geometry — the μ term has
+   almost no leverage to stabilise it (65.8° → 65.0°, only 1% reduction).
+   This is not a failure of mode (b); it is a fundamental observation that
+   the secondary objective only matters when there is slack in the primary
+   constraints.
+
+3. **Cfg4 is the best showcase for part (b):** the goal `[-0.5, 1.5, 1.2]`
+   sits behind and to the side of the robot, requiring a large J1 swing
+   and major wrist reorientation. Mode (a) swings the shaft through 60°.
+   Mode (b) keeps it within 5.4° using the same 179-step convergence.
+
+4. **Cfg3 numerically validates the joint-limit constraint** — without the
+   bound clamp the QP would push J2 well past +0.611 rad. With the bound
+   active, J2 saturates at +0.611 and the remaining motion is distributed
+   to other joints. Final tip position [1.47, 0, −1.29] is the closest
+   the wrist centre can get to [1.5, 0, −1.5] with J2 ≤ +0.611.
+
+### Bug found and fixed during scenario design
+
+`Cfg3` initially used start `q0 = [0, 0.4, 0.3, 0, 0.5, 0]` (J2 = +0.4),
+which was too close to the +0.611 limit and caused the *initial* QP step
+to be marginally infeasible (the bounds `lb`/`ub` clipped harshly). Moved
+`q0` to `[0, 0, 0.3, 0, 0, 0]` and chose a deeper goal `[1.5, 0, −1.5]`
+so the limit activates *during* the trajectory, not at step 0. Better
+demonstration.
 
 Key observations:
 - The 3 mm sphere constraint activates at step ~50 for Config 1 and holds
